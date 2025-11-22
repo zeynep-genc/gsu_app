@@ -2,7 +2,7 @@
 <html lang="tr">
   <head>
     <meta charset="UTF-8" />
-    <title>UniConnect - Demo</title>
+    <title>UniConnect</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- Basit stil -->
     <style>
@@ -357,6 +357,29 @@
         margin-bottom: 10px;
         display: inline-block;
       }
+
+      .tab-buttons {
+        display: flex;
+        gap: 8px;
+      }
+      .tab-buttons button {
+        border-radius: 999px;
+        border: none;
+        padding: 6px 12px;
+        font-size: 13px;
+        cursor: pointer;
+        background: #f3f4f6;
+      }
+      .tab-buttons button.active {
+        background: #2563eb;
+        color: white;
+      }
+
+      .error-text {
+        font-size: 12px;
+        color: #dc2626;
+        margin-top: 4px;
+      }
     </style>
 
     <!-- React + ReactDOM + Babel (CDN) -->
@@ -389,7 +412,24 @@
           "GSÜ Bilgisayar Mühendisliği Kulübü, yazılım, yapay zeka ve veri bilimi alanlarında atölye, eğitim ve etkinlikler düzenler.",
       };
 
-      // Örnek etkinlik verileri (farklı kulüpler de var ama temsilci yalnızca kendi kulübünü görür)
+      // Öğrenci hesabı
+      const STUDENT_ACCOUNT = {
+        email: "zeynepbetul@gmail.com",
+        password: "123456",
+        username: "zeynep_betul",
+        university: "Galatasaray Üniversitesi",
+        department: "Bilgisayar Mühendisliği",
+        grade: 4,
+      };
+
+      // Kulüp temsilcisi hesabı
+      const CLUB_ACCOUNT = {
+        university: FIXED_CLUB.university,
+        clubName: FIXED_CLUB.name,
+        password: "kulup123",
+      };
+
+      // Örnek etkinlik verileri
       const INITIAL_EVENTS = [
         {
           id: 1,
@@ -486,12 +526,12 @@
             <div>
               <h1>UniConnect</h1>
               <span className="subtitle">
-                Türkiye üniversite kulüp ve etkinlik yönetim platformu (Demo)
+                Türkiye üniversite kulüp ve etkinlik yönetim platformu
               </span>
             </div>
             <div className="right">
               {view === "login" ? (
-                <span>Demo arayüzü</span>
+                <span style={{ fontSize: 12 }}>Giriş yapılmadı</span>
               ) : (
                 <>
                   <span style={{ fontSize: 12 }}>
@@ -509,15 +549,51 @@
       }
 
       // Login ekranı
-      function LoginScreen({ onLoginAsStudent, onLoginAsClub }) {
+      function LoginScreen({ onStudentSuccess, onClubSuccess }) {
+        const [studentEmail, setStudentEmail] = useState("");
+        const [studentPassword, setStudentPassword] = useState("");
+        const [studentError, setStudentError] = useState("");
+
+        const [clubUniversity, setClubUniversity] = useState("");
+        const [clubName, setClubName] = useState("");
+        const [clubPassword, setClubPassword] = useState("");
+        const [clubError, setClubError] = useState("");
+
+        function handleStudentLogin() {
+          if (
+            studentEmail === STUDENT_ACCOUNT.email &&
+            studentPassword === STUDENT_ACCOUNT.password
+          ) {
+            setStudentError("");
+            onStudentSuccess();
+          } else {
+            setStudentError("E-posta veya şifre hatalı.");
+          }
+        }
+
+        function handleClubLogin() {
+          if (
+            clubUniversity === CLUB_ACCOUNT.university &&
+            clubName === CLUB_ACCOUNT.clubName &&
+            clubPassword === CLUB_ACCOUNT.password
+          ) {
+            setClubError("");
+            onClubSuccess();
+          } else {
+            setClubError(
+              "Bilgiler hatalı. Okul adı, kulüp adı ve şifreyi kontrol edin."
+            );
+          }
+        }
+
         return (
           <main>
             <div className="card">
-              <h2>UniConnect Demo Giriş Ekranı</h2>
+              <h2>UniConnect Giriş Ekranı</h2>
               <p style={{ fontSize: 14, color: "#4b5563" }}>
-                Bu demo, raporda tanımlanan sistemin yalnızca ön yüzünü
-                göstermektedir. Gerçek veri tabanı bağlantısı yoktur; arayüz ve
-                temel akışlar sunulmaktadır.
+                Bu ekran üzerinden öğrenci ya da kulüp temsilcisi olarak giriş
+                yapabilir, kulüp etkinliklerini görüntüleyebilir ve
+                yönetebilirsiniz.
               </p>
 
               <div className="login-wrapper">
@@ -525,32 +601,58 @@
                   <h2>Öğrenci Girişi</h2>
                   <p style={{ fontSize: 13, color: "#6b7280" }}>
                     Öğrenci, Türkiye’deki üniversitelerdeki kulüp etkinliklerini
-                    görüntüleyip ilgi alanına uygun etkinlikleri inceleyebilir.
+                    görüntüleyip ilgi alanına uygun etkinlikleri inceleyebilir
+                    ve katılım isteği gönderebilir.
                   </p>
                   <label>E-posta</label>
-                  <input placeholder="ornek@uni.edu.tr" />
+                  <input
+                    placeholder="ornek@uni.edu.tr"
+                    value={studentEmail}
+                    onChange={(e) => setStudentEmail(e.target.value)}
+                  />
                   <label>Şifre</label>
-                  <input type="password" placeholder="••••••••" />
-                  <button className="btn" onClick={onLoginAsStudent}>
-                    Öğrenci olarak devam et
+                  <input
+                    type="password"
+                    placeholder="Şifreniz"
+                    value={studentPassword}
+                    onChange={(e) => setStudentPassword(e.target.value)}
+                  />
+                  {studentError && (
+                    <div className="error-text">{studentError}</div>
+                  )}
+                  <button className="btn" onClick={handleStudentLogin}>
+                    Öğrenci olarak giriş yap
                   </button>
                 </div>
 
                 <div className="login-box card" style={{ marginBottom: 0 }}>
                   <h2>Kulüp Temsilcisi Girişi</h2>
                   <p style={{ fontSize: 13, color: "#6b7280" }}>
-                    Bu demo temsilcisi,{" "}
-                    <strong>
-                      {FIXED_CLUB.university} – {FIXED_CLUB.name}
-                    </strong>{" "}
-                    adına işlem yapmaktadır.
+                    Kulüp temsilcisi, bağlı olduğu kulüp adına etkinlikleri
+                    oluşturur ve yönetir.
                   </p>
-                  <label>Kullanıcı Adı</label>
-                  <input placeholder="kulup_temsilcisi" />
+                  <label>Okul Adı</label>
+                  <input
+                    placeholder="Örn: Galatasaray Üniversitesi"
+                    value={clubUniversity}
+                    onChange={(e) => setClubUniversity(e.target.value)}
+                  />
+                  <label>Kulüp Adı</label>
+                  <input
+                    placeholder="Örn: Bilgisayar Mühendisliği Kulübü"
+                    value={clubName}
+                    onChange={(e) => setClubName(e.target.value)}
+                  />
                   <label>Şifre</label>
-                  <input type="password" placeholder="••••••••" />
-                  <button className="btn" onClick={onLoginAsClub}>
-                    Kulüp temsilcisi olarak devam et
+                  <input
+                    type="password"
+                    placeholder="Kulüp şifresi"
+                    value={clubPassword}
+                    onChange={(e) => setClubPassword(e.target.value)}
+                  />
+                  {clubError && <div className="error-text">{clubError}</div>}
+                  <button className="btn" onClick={handleClubLogin}>
+                    Kulüp temsilcisi olarak giriş yap
                   </button>
                 </div>
               </div>
@@ -566,6 +668,8 @@
         onToggleFavorite,
         onJoinEvent,
       }) {
+        const [activeTab, setActiveTab] = useState("events"); // events | profile
+
         const [selectedCategory, setSelectedCategory] = useState("Hepsi");
         const [selectedUniversity, setSelectedUniversity] = useState("Hepsi");
         const [selectedCity, setSelectedCity] = useState("Hepsi");
@@ -638,230 +742,316 @@
 
         return (
           <main>
-            {/* Önerilen etkinlikler */}
-            <div className="card">
-              <div className="section-title">Önerilen Etkinlikler</div>
-              <p style={{ fontSize: 13, color: "#6b7280" }}>
-                Öğrencinin ilgi alanlarına göre önerildiği varsayılan örnek
-                etkinlikler. Türkiye’deki farklı üniversitelerden örnekler
-                gösterilmektedir.
-              </p>
-              <div className="grid cols-3">
-                {recommended.map((e) => (
-                  <div key={e.id} className="event-card">
-                    <div className="favorite-heart">
-                      <button
-                        className="icon-btn"
-                        title="Favorilere ekle/çıkar"
-                        onClick={() => onToggleFavorite(e.id)}
-                      >
-                        {favorites.includes(e.id) ? "❤️" : "🤍"}
-                      </button>
-                    </div>
-                    <div>
-                      <h3>{e.title}</h3>
-                      <div className="event-meta">
-                        {e.university} · {e.city}
-                      </div>
-                      <div className="event-meta">
-                        {e.club} · {e.date} · {e.category}
-                      </div>
-                      <div>
-                        {e.tags.map((t) => (
-                          <span key={t} className="pill">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="event-footer">
-                      <button
-                        className="btn small secondary"
-                        onClick={() => handleMapClick(e)}
-                      >
-                        Haritada gör
-                      </button>
-                      <button
-                        className="btn small secondary"
-                        onClick={() => handleDetailClick(e)}
-                      >
-                        Detay
-                      </button>
-                      <button
-                        className="btn small"
-                        onClick={() => handleJoinClick(e)}
-                      >
-                        Katılım isteği gönder
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Tüm etkinlikler + filtreler */}
-            <div className="card">
+            <div className="card" style={{ padding: 14, marginBottom: 18 }}>
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  marginBottom: 8,
                   gap: 12,
                 }}
               >
-                <div className="section-title">Tüm Etkinlikler</div>
-                <div className="filter-row">
-                  <span style={{ fontSize: 12 }}>Kategori:</span>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>
+                    Hoş geldin, {STUDENT_ACCOUNT.username}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#6b7280" }}>
+                    {STUDENT_ACCOUNT.university} ·{" "}
+                    {STUDENT_ACCOUNT.department} · {STUDENT_ACCOUNT.grade}.
+                    sınıf
+                  </div>
+                </div>
+                <div className="tab-buttons">
+                  <button
+                    className={
+                      activeTab === "events" ? "active" : undefined
+                    }
+                    onClick={() => setActiveTab("events")}
                   >
-                    {categories.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                  <span style={{ fontSize: 12 }}>Üniversite:</span>
-                  <select
-                    value={selectedUniversity}
-                    onChange={(e) => setSelectedUniversity(e.target.value)}
+                    Etkinlikler
+                  </button>
+                  <button
+                    className={
+                      activeTab === "profile" ? "active" : undefined
+                    }
+                    onClick={() => setActiveTab("profile")}
                   >
-                    {universities.map((u) => (
-                      <option key={u} value={u}>
-                        {u}
-                      </option>
-                    ))}
-                  </select>
-                  <span style={{ fontSize: 12 }}>Şehir:</span>
-                  <select
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
-                  >
-                    {cities.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+                    Profilim
+                  </button>
                 </div>
               </div>
+            </div>
 
-              {filteredEvents.length === 0 ? (
-                <p className="empty">
-                  Seçilen filtrelere uygun etkinlik bulunamadı (demo verisi).
+            {activeTab === "profile" ? (
+              <div className="card">
+                <div className="section-title">Kullanıcı Bilgileri</div>
+                <p style={{ fontSize: 13, color: "#6b7280" }}>
+                  Bu sayfada sisteme kayıtlı kullanıcı bilgilerini
+                  görüntüleyebilirsiniz.
                 </p>
-              ) : (
-                <div className="grid cols-3">
-                  {filteredEvents.map((e) => (
-                    <div key={e.id} className="event-card">
-                      <div className="favorite-heart">
-                        <button
-                          className="icon-btn"
-                          title="Favorilere ekle/çıkar"
-                          onClick={() => onToggleFavorite(e.id)}
-                        >
-                          {favorites.includes(e.id) ? "❤️" : "🤍"}
-                        </button>
-                      </div>
-                      <div>
-                        <h3>{e.title}</h3>
-                        <div className="event-meta">
-                          {e.university} · {e.city}
-                        </div>
-                        <div className="event-meta">
-                          {e.club} · {e.date} · {e.category}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 12,
+                    marginTop: 8,
+                  }}
+                >
+                  <div>
+                    <label>Kullanıcı adı</label>
+                    <div>{STUDENT_ACCOUNT.username}</div>
+                  </div>
+                  <div>
+                    <label>E-posta</label>
+                    <div>{STUDENT_ACCOUNT.email}</div>
+                  </div>
+                  <div>
+                    <label>Üniversite</label>
+                    <div>{STUDENT_ACCOUNT.university}</div>
+                  </div>
+                  <div>
+                    <label>Bölüm</label>
+                    <div>{STUDENT_ACCOUNT.department}</div>
+                  </div>
+                  <div>
+                    <label>Sınıf</label>
+                    <div>{STUDENT_ACCOUNT.grade}. sınıf</div>
+                  </div>
+                  <div>
+                    <label>Şifre</label>
+                    <div>********</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Önerilen etkinlikler */}
+                <div className="card">
+                  <div className="section-title">Önerilen Etkinlikler</div>
+                  <p style={{ fontSize: 13, color: "#6b7280" }}>
+                    İlgi alanlarınıza uygun olarak listelenmiş bazı öne çıkan
+                    etkinlikler.
+                  </p>
+                  <div className="grid cols-3">
+                    {recommended.map((e) => (
+                      <div key={e.id} className="event-card">
+                        <div className="favorite-heart">
+                          <button
+                            className="icon-btn"
+                            title="Favorilere ekle/çıkar"
+                            onClick={() => onToggleFavorite(e.id)}
+                          >
+                            {favorites.includes(e.id) ? "❤️" : "🤍"}
+                          </button>
                         </div>
                         <div>
-                          {e.tags.map((t) => (
-                            <span key={t} className="pill">
-                              {t}
-                            </span>
-                          ))}
+                          <h3>{e.title}</h3>
+                          <div className="event-meta">
+                            {e.university} · {e.city}
+                          </div>
+                          <div className="event-meta">
+                            {e.club} · {e.date} · {e.category}
+                          </div>
+                          <div>
+                            {e.tags.map((t) => (
+                              <span key={t} className="pill">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="event-footer">
+                          <button
+                            className="btn small secondary"
+                            onClick={() => handleMapClick(e)}
+                          >
+                            Haritada gör
+                          </button>
+                          <button
+                            className="btn small secondary"
+                            onClick={() => handleDetailClick(e)}
+                          >
+                            Detay
+                          </button>
+                          <button
+                            className="btn small"
+                            onClick={() => handleJoinClick(e)}
+                          >
+                            Katılım isteği gönder
+                          </button>
                         </div>
                       </div>
-                      <div className="event-footer">
-                        <button
-                          className="btn small secondary"
-                          onClick={() => handleMapClick(e)}
-                        >
-                          Haritada gör
-                        </button>
-                        <button
-                          className="btn small secondary"
-                          onClick={() => handleDetailClick(e)}
-                        >
-                          Detay
-                        </button>
-                        <button
-                          className="btn small"
-                          onClick={() => handleJoinClick(e)}
-                        >
-                          Katılım isteği gönder
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* Favoriler */}
-            <div className="card">
-              <div className="section-title">Favori Etkinliklerim</div>
-              {favoriteEvents.length === 0 ? (
-                <p className="empty">
-                  Henüz favorilere eklediğiniz bir etkinlik yok. Kalp
-                  ikonuna tıklayarak favori ekleyebilirsiniz.
-                </p>
-              ) : (
-                <div className="grid cols-3">
-                  {favoriteEvents.map((e) => (
-                    <div key={e.id} className="event-card">
-                      <div className="favorite-heart">
-                        <button
-                          className="icon-btn"
-                          title="Favorilerden çıkar"
-                          onClick={() => onToggleFavorite(e.id)}
-                        >
-                          ❤️
-                        </button>
-                      </div>
-                      <div>
-                        <h3>{e.title}</h3>
-                        <div className="event-meta">
-                          {e.university} · {e.city}
-                        </div>
-                        <div className="event-meta">
-                          {e.club} · {e.date} · {e.category}
-                        </div>
-                      </div>
-                      <div className="event-footer">
-                        <button
-                          className="btn small secondary"
-                          onClick={() => handleMapClick(e)}
-                        >
-                          Haritada gör
-                        </button>
-                        <button
-                          className="btn small secondary"
-                          onClick={() => handleDetailClick(e)}
-                        >
-                          Detay
-                        </button>
-                        <button
-                          className="btn small"
-                          onClick={() => handleJoinClick(e)}
-                        >
-                          Katılım isteği gönder
-                        </button>
-                      </div>
+                {/* Tüm etkinlikler + filtreler */}
+                <div className="card">
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 8,
+                      gap: 12,
+                    }}
+                  >
+                    <div className="section-title">Tüm Etkinlikler</div>
+                    <div className="filter-row">
+                      <span style={{ fontSize: 12 }}>Kategori:</span>
+                      <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                      >
+                        {categories.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                      <span style={{ fontSize: 12 }}>Üniversite:</span>
+                      <select
+                        value={selectedUniversity}
+                        onChange={(e) =>
+                          setSelectedUniversity(e.target.value)
+                        }
+                      >
+                        {universities.map((u) => (
+                          <option key={u} value={u}>
+                            {u}
+                          </option>
+                        ))}
+                      </select>
+                      <span style={{ fontSize: 12 }}>Şehir:</span>
+                      <select
+                        value={selectedCity}
+                        onChange={(e) => setSelectedCity(e.target.value)}
+                      >
+                        {cities.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  ))}
+                  </div>
+
+                  {filteredEvents.length === 0 ? (
+                    <p className="empty">
+                      Seçilen filtrelere uygun etkinlik bulunamadı.
+                    </p>
+                  ) : (
+                    <div className="grid cols-3">
+                      {filteredEvents.map((e) => (
+                        <div key={e.id} className="event-card">
+                          <div className="favorite-heart">
+                            <button
+                              className="icon-btn"
+                              title="Favorilere ekle/çıkar"
+                              onClick={() => onToggleFavorite(e.id)}
+                            >
+                              {favorites.includes(e.id) ? "❤️" : "🤍"}
+                            </button>
+                          </div>
+                          <div>
+                            <h3>{e.title}</h3>
+                            <div className="event-meta">
+                              {e.university} · {e.city}
+                            </div>
+                            <div className="event-meta">
+                              {e.club} · {e.date} · {e.category}
+                            </div>
+                            <div>
+                              {e.tags.map((t) => (
+                                <span key={t} className="pill">
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="event-footer">
+                            <button
+                              className="btn small secondary"
+                              onClick={() => handleMapClick(e)}
+                            >
+                              Haritada gör
+                            </button>
+                            <button
+                              className="btn small secondary"
+                              onClick={() => handleDetailClick(e)}
+                            >
+                              Detay
+                            </button>
+                            <button
+                              className="btn small"
+                              onClick={() => handleJoinClick(e)}
+                            >
+                              Katılım isteği gönder
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+
+                {/* Favoriler */}
+                <div className="card">
+                  <div className="section-title">Favori Etkinliklerim</div>
+                  {favoriteEvents.length === 0 ? (
+                    <p className="empty">
+                      Henüz favorilere eklediğiniz bir etkinlik yok. Kalp
+                      ikonuna tıklayarak favori ekleyebilirsiniz.
+                    </p>
+                  ) : (
+                    <div className="grid cols-3">
+                      {favoriteEvents.map((e) => (
+                        <div key={e.id} className="event-card">
+                          <div className="favorite-heart">
+                            <button
+                              className="icon-btn"
+                              title="Favorilerden çıkar"
+                              onClick={() => onToggleFavorite(e.id)}
+                            >
+                              ❤️
+                            </button>
+                          </div>
+                          <div>
+                            <h3>{e.title}</h3>
+                            <div className="event-meta">
+                              {e.university} · {e.city}
+                            </div>
+                            <div className="event-meta">
+                              {e.club} · {e.date} · {e.category}
+                            </div>
+                          </div>
+                          <div className="event-footer">
+                            <button
+                              className="btn small secondary"
+                              onClick={() => handleMapClick(e)}
+                            >
+                              Haritada gör
+                            </button>
+                            <button
+                              className="btn small secondary"
+                              onClick={() => handleDetailClick(e)}
+                            >
+                              Detay
+                            </button>
+                            <button
+                              className="btn small"
+                              onClick={() => handleJoinClick(e)}
+                            >
+                              Katılım isteği gönder
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Etkinlik Detayı Modalı + kapasite/doluluk */}
             {detailEvent && (
@@ -935,8 +1125,8 @@
                 })()}
 
                 <p style={{ marginTop: 8 }}>
-                  Bu alan, gerçek sistemde etkinlik açıklamasının detaylı
-                  gösterileceği bölümü temsil eder.
+                  Bu alan, etkinliğe ait açıklama ve ek bilgilerin
+                  görüntüleneceği bölümü temsil eder.
                 </p>
                 <div style={{ marginTop: 10 }}>
                   <button
@@ -949,7 +1139,7 @@
               </Modal>
             )}
 
-            {/* Kulüp Detayı Modalı (sadece kulüp profili) */}
+            {/* Kulüp Detayı Modalı */}
             {clubDetailsEvent && (
               <Modal
                 title="Kulüp Detayı"
@@ -976,25 +1166,20 @@
               </Modal>
             )}
 
-            {/* Katılım isteği popup (dinamik mesaj) */}
+            {/* Katılım isteği popup */}
             {joinResult && (
               <Modal
                 title={joinResult.title}
                 onClose={() => setJoinResult(null)}
               >
                 <p>{joinResult.message}</p>
-                <p style={{ fontSize: 12, color: "#9ca3af" }}>
-                  Bu demo sürümde isteğiniz yalnızca ön yüzde
-                  gösterilmektedir; gerçek sistemde bu bilgi veritabanına
-                  kaydedilecektir.
-                </p>
               </Modal>
             )}
 
             {/* Harita popup */}
             {mapEvent && (
               <Modal
-                title="Etkinlik Konumu (Demo)"
+                title="Etkinlik Konumu"
                 onClose={() => setMapEvent(null)}
               >
                 <p>
@@ -1007,8 +1192,8 @@
                   ></iframe>
                 </div>
                 <p className="map-caption">
-                  Bu harita, kulüp temsilcisinin girdiği harita bağlantısına
-                  göre gösterilmektedir.
+                  Harita bağlantısı, etkinliği oluşturan kulüp temsilcisi
+                  tarafından eklenmektedir.
                 </p>
               </Modal>
             )}
@@ -1072,7 +1257,7 @@
             clubDescription: clubProfile.description || "",
           };
           onCreateEvent(newEvent);
-          setInfo("Etkinlik demo ortamına eklendi (sadece ön yüzde).");
+          setInfo("Etkinlik eklendi.");
           setForm({
             title: "",
             date: "",
@@ -1121,7 +1306,7 @@
                 {activeTab === "events" && (
                   <div className="card">
                     <div className="section-title">
-                      Kulüp Etkinlikleri (Sadece Kendi Kulübü)
+                      Kulüp Etkinlikleri (Kendi Kulübünüz)
                     </div>
                     <p
                       style={{
@@ -1134,13 +1319,12 @@
                       <strong>
                         {clubProfile.university} – {clubProfile.name}
                       </strong>{" "}
-                      adına kayıtlı etkinlikleri gösterir. Diğer üniversite ve
-                      kulüplere ait etkinlikler burada listelenmez.
+                      adına kayıtlı etkinlikleri gösterir.
                     </p>
                     {clubEvents.length === 0 ? (
                       <p className="empty">
                         Henüz bu kulübe ait etkinlik bulunmuyor. "Yeni Etkinlik
-                        Oluştur" sekmesinden demo etkinlik ekleyebilirsiniz.
+                        Oluştur" sekmesinden etkinlik ekleyebilirsiniz.
                       </p>
                     ) : (
                       <div className="grid cols-2">
@@ -1187,14 +1371,14 @@
                 {activeTab === "new" && (
                   <div className="card">
                     <div className="section-title">
-                      Yeni Etkinlik Oluştur (Demo Formu)
+                      Yeni Etkinlik Oluştur
                     </div>
                     <p className="info-pill">
-                      Bu temsilci yalnızca{" "}
+                      Etkinlikler{" "}
                       <strong>
                         {clubProfile.university} – {clubProfile.name}
                       </strong>{" "}
-                      adına etkinlik oluşturabilir.
+                      adına oluşturulacaktır.
                     </p>
                     <p
                       style={{
@@ -1205,8 +1389,7 @@
                     >
                       Etkinlik oluşturulurken kulüp adı, üniversite ve şehir
                       bilgisi otomatik olarak kulüp profilinizden alınır. Formda
-                      yalnızca etkinlik özel bilgileri (ad, tarih, kategori,
-                      kapasite vb.) girilir.
+                      yalnızca etkinliğe özel bilgiler girilir.
                     </p>
                     <form onSubmit={handleSubmit}>
                       <label>Etkinlik Adı *</label>
@@ -1281,7 +1464,7 @@
                       </p>
 
                       <button className="btn" type="submit">
-                        Demo olarak etkinlik ekle
+                        Etkinlik ekle
                       </button>
                       {info && (
                         <p
@@ -1310,11 +1493,7 @@
                     >
                       Bu bölüm, kulüp temsilcisinin kulüp profili bilgilerini
                       girdiği alandır. Öğrenci tarafında "Kulüp Detayı"
-                      ekranında bu bilgiler gösterilir:
-                      <br />
-                      <strong>
-                        Kulüp adı, üniversite, şehir ve kulüp açıklaması.
-                      </strong>
+                      ekranında bu bilgiler gösterilir.
                     </p>
                     <label>Kulüp Adı</label>
                     <input
@@ -1440,10 +1619,8 @@
                         ></iframe>
                       </div>
                       <p className="map-caption">
-                        Bu harita, kulüp temsilcisinin girdiği harita
-                        bağlantısına göre gösterilir. Böylece temsilci hem
-                        katılımcı sayılarını hem de etkinlik konumunu tek
-                        ekranda görebilir.
+                        Harita, etkinlik oluşturulurken eklenen harita
+                        bağlantısına göre görüntülenmektedir.
                       </p>
                     </>
                   );
@@ -1472,7 +1649,7 @@
         function handleJoinEvent(eventId) {
           let result = {
             title: "Katılım İsteği",
-            message: "Katılım isteğiniz başarıyla alındı.",
+            message: "Katılım isteğiniz alındı.",
           };
 
           setEvents((prev) =>
@@ -1494,7 +1671,7 @@
                 // normal katılım
                 result = {
                   title: "Katılım İsteği",
-                  message: "Katılım isteğiniz başarıyla alındı.",
+                  message: "Katılım isteğiniz alındı.",
                 };
                 return { ...e, participants: part + 1 };
               }
@@ -1515,8 +1692,8 @@
             <Header view={view} onLogout={handleLogout} />
             {view === "login" && (
               <LoginScreen
-                onLoginAsStudent={() => setView("student")}
-                onLoginAsClub={() => setView("club")}
+                onStudentSuccess={() => setView("student")}
+                onClubSuccess={() => setView("club")}
               />
             )}
             {view === "student" && (
@@ -1531,8 +1708,7 @@
               <ClubDashboard events={events} onCreateEvent={handleCreateEvent} />
             )}
             <footer>
-              UniConnect – Araştırma Yöntemleri Proje Demosu (yalnızca
-              frontend)
+              UniConnect – Üniversite Kulüp ve Etkinlik Yönetim Platformu
             </footer>
           </div>
         );
