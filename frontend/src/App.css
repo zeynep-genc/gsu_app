@@ -1,0 +1,413 @@
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f5f5f7;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background: linear-gradient(135deg, #ffb347, #ffcc33);
+  padding: 16px 24px;
+  color: #222;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+header span.subtitle {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+header .right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+header button {
+  border: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+header button:hover {
+  background: white;
+}
+
+main {
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+  flex: 1;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  margin-bottom: 16px;
+}
+
+.login-wrapper {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.login-box h2 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: #444;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 8px 10px;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.btn {
+  border-radius: 999px;
+  border: none;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  background: #2563eb;
+  color: white;
+}
+
+.btn.secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.btn.small {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn + .btn {
+  margin-left: 8px;
+}
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  margin-right: 6px;
+  margin-top: 4px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .grid.cols-2 {
+    grid-template-columns: 2fr 1fr;
+  }
+
+  .grid.cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.event-card {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+.event-card h3 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+}
+
+.favorite-heart {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.event-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.event-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sidebar-layout {
+  display: grid;
+  gap: 18px;
+}
+
+@media (min-width: 900px) {
+  .sidebar-layout {
+    grid-template-columns: 220px 1fr;
+  }
+}
+
+.sidebar {
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.sidebar h3 {
+  margin-top: 0;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.sidebar button {
+  width: 100%;
+  margin-bottom: 6px;
+  text-align: left;
+  border-radius: 8px;
+  border: none;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: #f3f4f6;
+  cursor: pointer;
+}
+
+.sidebar button.active {
+  background: #2563eb;
+  color: white;
+}
+
+.empty {
+  font-size: 13px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+footer {
+  text-align: center;
+  padding: 12px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 18px 20px 14px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.3);
+  animation: modal-in 0.16s ease-out;
+}
+
+.modal h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
+
+.modal p {
+  font-size: 13px;
+  color: #4b5563;
+  margin: 4px 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.map-frame {
+  margin-top: 8px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.map-frame iframe {
+  width: 100%;
+  height: 220px;
+  border: 0;
+}
+
+.map-caption {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.capacity-bar {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.capacity-fill {
+  height: 100%;
+  background: #22c55e;
+  transition: width 0.2s ease-out;
+}
+
+.capacity-fill.full {
+  background: #ef4444;
+}
+
+.capacity-legend {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.capacity-summary {
+  font-size: 12px;
+  color: #4b5563;
+  margin: 4px 0;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.filter-row select {
+  width: 150px;
+  margin-bottom: 0;
+}
+
+.info-pill {
+  font-size: 12px;
+  background: #eef2ff;
+  color: #3730a3;
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  display: inline-block;
+}
+
+.tab-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-buttons button {
+  border-radius: 999px;
+  border: none;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  background: #f3f4f6;
+}
+
+.tab-buttons button.active {
+  background: #2563eb;
+  color: white;
+}
+
+.error-text {
+  font-size: 12px;
+  color: #dc2626;
+  margin-top: 4px;
+}
