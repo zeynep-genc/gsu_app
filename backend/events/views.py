@@ -212,9 +212,6 @@ class RecommendationView(APIView):
         today = timezone.localdate()
 
         if interest_ids:
-            # Score by number of overlapping tags, then by popularity and recency
-            # Include events regardless of date so we surface relevant items even
-            # if sample data dates are in the past.
             events = (
                 Event.objects.annotate(
                     score=Count("tags", filter=Q(tags__in=interest_ids))
@@ -224,8 +221,6 @@ class RecommendationView(APIView):
                 .order_by("-score", "-popularity", "date")[:50]
             )
         else:
-            # Fallback: recommend popular upcoming events from the same university,
-            # then global popular events if none found.
             events = (
                 Event.objects.filter(date__gte=today, university__iexact=student.university)
                 .annotate(popularity=F("participants_count"))

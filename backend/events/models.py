@@ -30,6 +30,16 @@ class Club(TimeStampedModel):
         return check_password(raw_password, self.password)
 
 
+class Tag(TimeStampedModel):
+    name = models.CharField(max_length=60, unique=True)
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Student(TimeStampedModel):
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150, unique=True)
@@ -37,6 +47,10 @@ class Student(TimeStampedModel):
     department = models.CharField(max_length=255)
     grade = models.PositiveSmallIntegerField(default=1)
     password = models.CharField(max_length=128)
+
+    interests = models.ManyToManyField(
+        Tag, related_name="interested_students", blank=True
+    )
 
     def __str__(self) -> str:
         return self.username
@@ -46,16 +60,6 @@ class Student(TimeStampedModel):
 
     def check_password(self, raw_password: str) -> bool:
         return check_password(raw_password, self.password)
-
-
-class Tag(TimeStampedModel):
-    name = models.CharField(max_length=60, unique=True)
-
-    class Meta:
-        ordering = ("name",)
-
-    def __str__(self) -> str:
-        return self.name
 
 
 class Event(TimeStampedModel):

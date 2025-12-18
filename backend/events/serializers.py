@@ -5,6 +5,13 @@ from rest_framework import serializers
 from .models import Club, Event, Favorite, Participation, Student, Tag
 
 
+def normalize_tag_name(s: str) -> str:
+ 
+    s = (s or "").strip().lower()
+    s = " ".join(s.split())
+    return s
+
+
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
@@ -23,6 +30,7 @@ class EventSerializer(serializers.ModelSerializer):
         queryset=Club.objects.all(), source="club", write_only=True
     )
     tags = TagSerializer(many=True, read_only=True)
+
     tag_names = serializers.ListField(
         child=serializers.CharField(),
         write_only=True,
@@ -53,15 +61,18 @@ class EventSerializer(serializers.ModelSerializer):
         if not tag_names:
             instance.tags.clear()
             return
+
         normalized = []
         for raw in tag_names:
-            stripped = raw.strip().lower()
-            if stripped:
-                normalized.append(stripped)
+            name = normalize_tag_name(raw)
+            if name:
+                normalized.append(name)
+
         tags = []
         for name in normalized:
             tag, _ = Tag.objects.get_or_create(name=name)
             tags.append(tag)
+
         instance.tags.set(tags)
 
     def create(self, validated_data):
@@ -79,6 +90,7 @@ class EventSerializer(serializers.ModelSerializer):
 
 
 class StudentSerializer(serializers.ModelSerializer):
+
     interests = TagSerializer(many=True, read_only=True)
 
     class Meta:
@@ -95,11 +107,9 @@ class StudentSerializer(serializers.ModelSerializer):
 
 
 class StudentRegistrationSerializer(serializers.ModelSerializer):
+
     password = serializers.CharField(write_only=True, min_length=6)
     username = serializers.CharField(required=False, allow_blank=True)
-    tag_names = serializers.ListField(
-        child=serializers.CharField(), write_only=True, required=False, allow_empty=True
-    )
 
     class Meta:
         model = Student
@@ -115,9 +125,8 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop("password")
-        tag_names = validated_data.pop("tag_names", [])
 
-        # Ensure grade is stored as integer. Accept strings like "hazirlik" or numeric strings.
+        # grade: string gelirse int'e çevir
         raw_grade = validated_data.get("grade")
         if isinstance(raw_grade, str):
             if raw_grade.lower() == "hazirlik":
@@ -128,12 +137,11 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
                 except (TypeError, ValueError):
                     validated_data["grade"] = 1
 
-        # If username not provided, derive from email local-part
+        # username yoksa email local-part
         if not validated_data.get("username"):
             email = validated_data.get("email", "")
             base = email.split("@")[0] if "@" in email else (email or "user")
             username = base
-            # Ensure uniqueness
             counter = 1
             while Student.objects.filter(username=username).exists():
                 username = f"{base}{counter}"
@@ -143,28 +151,17 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
         student = Student(**validated_data)
         student.set_password(password)
         student.save()
-
-        # assign interests from tag_names
-        if tag_names:
-            normalized = []
-            for raw in tag_names:
-                stripped = raw.strip().lower()
-                if stripped:
-                    normalized.append(stripped)
-            tags = []
-            for name in normalized:
-                tag, _ = Tag.objects.get_or_create(name=name)
-                tags.append(tag)
-            student.interests.set(tags)
-
         return student
 
 
 class StudentUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating student profile, including interests via tag names."""
+
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     tag_names = serializers.ListField(
-        child=serializers.CharField(), write_only=True, required=False, allow_empty=True
+        child=serializers.CharField(),
+        write_only=True,
+        required=False,
+        allow_empty=True,
     )
 
     class Meta:
@@ -192,16 +189,17 @@ class StudentUpdateSerializer(serializers.ModelSerializer):
         instance.save()
 
         if tag_names is not None:
-            # assign interests from tag_names
             normalized = []
             for raw in tag_names:
-                stripped = raw.strip().lower()
-                if stripped:
-                    normalized.append(stripped)
+                name = normalize_tag_name(raw)
+                if name:
+                    normalized.append(name)
+
             tags = []
             for name in normalized:
                 tag, _ = Tag.objects.get_or_create(name=name)
                 tags.append(tag)
+
             instance.interests.set(tags)
 
         return instance
