@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
-import { DEFAULT_MAP_URL } from "../constants.js";
+import { useMemo, useState, useEffect } from "react";
+import { DEFAULT_MAP_URL, CLASS_LEVEL_OPTIONS } from "../constants.js";
 import Modal from "./Modal.jsx";
+import * as api from "../api.js";
 
 function getClubName(event) {
   if (!event) return "-";
@@ -43,6 +44,13 @@ function getMapUrl(event) {
   return event?.map_url || event?.mapUrl || DEFAULT_MAP_URL;
 }
 
+function getGradeLabel(value) {
+  const v = value === undefined || value === null ? null : Number(value);
+  const opt = CLASS_LEVEL_OPTIONS.find((o) => Number(o.value) === v);
+  if (opt) return opt.label;
+  return v ? `${v}. sınıf` : "-";
+}
+
 export default function StudentDashboard({
   events,
   favorites,
@@ -50,11 +58,161 @@ export default function StudentDashboard({
   onJoinEvent,
   loading,
   student,
+  onUpdateStudent,
+  recommendations = [],
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [form, setForm] = useState({});
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState("");
+  const [customTags, setCustomTags] = useState([]);
+  const [customTag, setCustomTag] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  let suggestionTimer = null;
+  useEffect(()=>{
+    console.debug('Recommendations prop length:', (recommendations||[]).length);
+  }, [recommendations]);
+  useEffect(() => {
+    setForm({
+      username: student?.username || "",
+      email: student?.email || "",
+      university: student?.university || "",
+      department: student?.department || "",
+      grade: student?.grade || "",
+      tagNames: (student?.interests || []).map((t) => (t.name ? t.name : t)).join(", "),
+      password: "",
+    });
+    // initialize tag list
+    const initialTags = (student?.interests || []).map((t) => (t.name ? t.name : t));
+    // assume all existing interests are selected (we won't retroactively split suggested/custom)
+    setTags(initialTags);
+    setCustomTags([]);
+  }, [student]);
+ 
+
+  function updateField(key, value) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function handleSaveProfile() {
+    try {
+      const payload = {
+        username: form.username,
+        university: form.university,
+        department: form.department,
+        grade: Number(form.grade),
+      };
+      if (form.password) payload.password = form.password;
+      // prepare tag_names from suggested tags + custom tags
+      payload.tag_names = [...tags, ...customTags].map((t) => (typeof t === "string" ? t.trim() : String(t).trim())).filter(Boolean);
+
+      const updated = await api.updateStudent(student.id, payload);
+      // updated is the student object or API wrapper; our backend returns {message, student}
+      const newStudent = updated.student || updated;
+      if (onUpdateStudent) onUpdateStudent(newStudent);
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Profil güncellenemedi:", err);
+      alert("Profil güncellenemedi: " + (err.message || err));
+    }
+  }
+
+  function addTag(raw) {
+    const candidate = (raw || "").trim();
+    if (!candidate) return;
+    // must match one of the current suggestions to be added via main input
+    const match = suggestions.find((s) => s.name && s.name.toLowerCase() === candidate.toLowerCase());
+    if (!match) {
+      alert("Bu etiket önerilerde bulunamadı. Lütfen özel etiket alanından ekleyin.");
+      return;
+    }
+    const tag = match.name.trim().toLowerCase();
+    if (tag.length > 30) {
+      alert("Etiket çok uzun (maks 30 karakter).");
+      return;
+    }
+    if (tags.includes(tag) || customTags.includes(tag)) {
+      alert("Etiket zaten eklendi.");
+      return;
+    }
+    if (tags.length + customTags.length >= 10) {
+      alert("Maksimum 10 etiket ekleyebilirsiniz.");
+      return;
+    }
+    setTags((t) => [...t, tag]);
+    setTagInput("");
+  }
+
+  function addCustomTag(raw) {
+    const tag = (raw || "").trim().toLowerCase();
+    if (!tag) return;
+    if (tag.length > 30) {
+      alert("Etiket çok uzun (maks 30 karakter).");
+      return;
+    }
+    if (tags.includes(tag) || customTags.includes(tag)) {
+      alert("Etiket zaten eklendi.");
+      return;
+    }
+    if (tags.length + customTags.length >= 10) {
+      alert("Maksimum 10 etiket ekleyebilirsiniz.");
+      return;
+    }
+    setCustomTags((c) => [...c, tag]);
+    setCustomTag("");
+  }
+
+  function removeTag(index) {
+    setTags((t) => t.filter((_, i) => i !== index));
+  }
+
+  function removeCustomTag(index) {
+    setCustomTags((t) => t.filter((_, i) => i !== index));
+  }
+
+  function handleTagInputKeyDown(e) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addTag(tagInput);
+    }
+  }
+
+  useEffect(() => {
+    // debounce fetching suggestions
+    if (suggestionTimer) clearTimeout(suggestionTimer);
+    if (!tagInput || tagInput.trim().length === 0) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    suggestionTimer = setTimeout(async () => {
+      try {
+        const res = await api.getTags(tagInput);
+        // res may be array of objects or strings
+        const items = Array.isArray(res)
+          ? res.map((r) => (typeof r === "string" ? { name: r } : { id: r.id, name: r.name }))
+          : [];
+        setSuggestions(items.slice(0, 10));
+        setShowSuggestions(true);
+      } catch (err) {
+        console.warn("Tag suggestions failed", err);
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 250);
+    return () => {
+      if (suggestionTimer) clearTimeout(suggestionTimer);
+    };
+  }, [tagInput]);
   const [activeTab, setActiveTab] = useState("events");
   const [selectedCategory, setSelectedCategory] = useState("Hepsi");
   const [selectedUniversity, setSelectedUniversity] = useState("Hepsi");
   const [selectedCity, setSelectedCity] = useState("Hepsi");
+  // recommendation-specific filters (separate from main event filters)
+  const [recCategory, setRecCategory] = useState("Hepsi");
+  const [recUniversity, setRecUniversity] = useState("Hepsi");
+  const [recCity, setRecCity] = useState("Hepsi");
   const [detailEvent, setDetailEvent] = useState(null);
   const [clubDetailsEvent, setClubDetailsEvent] = useState(null);
   const [joinResult, setJoinResult] = useState(null);
@@ -96,7 +254,41 @@ export default function StudentDashboard({
     });
   }, [events, selectedCategory, selectedUniversity, selectedCity]);
 
-  const recommended = filteredEvents.slice(0, 3);
+  const filteredRecommendations = useMemo(() => {
+    if (!recommendations || recommendations.length === 0) return [];
+    return recommendations.filter((event) => {
+      if (recCategory !== "Hepsi" && event.category !== recCategory) return false;
+      const university = event.university || event.club?.university;
+      if (recUniversity !== "Hepsi" && university !== recUniversity) return false;
+      const city = event.city || event.club?.city;
+      if (recCity !== "Hepsi" && city !== recCity) return false;
+      return true;
+    });
+  }, [recommendations, recCategory, recUniversity, recCity]);
+
+  const recCategories = useMemo(() => {
+    if (!recommendations) return ["Hepsi"];
+    const list = Array.from(new Set(recommendations.map((e) => e.category))).filter(Boolean);
+    return ["Hepsi", ...list];
+  }, [recommendations]);
+
+  const recUniversities = useMemo(() => {
+    if (!recommendations) return ["Hepsi"];
+    const list = Array.from(new Set(recommendations.map((e) => e.university || e.club?.university))).filter(Boolean);
+    return ["Hepsi", ...list];
+  }, [recommendations]);
+
+  const recCities = useMemo(() => {
+    if (!recommendations) return ["Hepsi"];
+    const list = Array.from(new Set(recommendations.map((e) => e.city || e.club?.city))).filter(Boolean);
+    return ["Hepsi", ...list];
+  }, [recommendations]);
+
+  useEffect(()=>{
+    console.debug('Filters:', {selectedCategory, selectedUniversity, selectedCity, filteredRecommendationsCount: filteredRecommendations.length});
+  }, [selectedCategory, selectedUniversity, selectedCity, filteredRecommendations.length]);
+
+  const recommended = (filteredRecommendations && filteredRecommendations.length > 0) ? filteredRecommendations.slice(0, 3) : [];
   const favoriteEvents = events.filter((event) => favorites.includes(event.id));
 
   async function handleJoinClick(event) {
@@ -173,40 +365,192 @@ export default function StudentDashboard({
               marginTop: 8,
             }}
           >
-            <div>
-              <label>Kullanıcı adı</label>
-              <div>{studentInfo.username || "-"}</div>
-            </div>
-            <div>
-              <label>E-posta</label>
-              <div>{studentInfo.email || "-"}</div>
-            </div>
-            <div>
-              <label>Üniversite</label>
-              <div>{studentInfo.university || "-"}</div>
-            </div>
-            <div>
-              <label>Bölüm</label>
-              <div>{studentInfo.department || "-"}</div>
-            </div>
-            <div>
-              <label>Sınıf</label>
-              <div>{studentInfo.grade || "-"}. sınıf</div>
-            </div>
-            <div>
-              <label>Şifre</label>
-              <div>********</div>
-            </div>
+            {!isEditing ? (
+              <>
+                <div>
+                  <label>Kullanıcı adı</label>
+                  <div>{studentInfo.username || "-"}</div>
+                </div>
+                <div>
+                  <label>E-posta</label>
+                  <div>{studentInfo.email || "-"}</div>
+                </div>
+                <div>
+                  <label>Üniversite</label>
+                  <div>{studentInfo.university || "-"}</div>
+                </div>
+                <div>
+                  <label>Bölüm</label>
+                  <div>{studentInfo.department || "-"}</div>
+                </div>
+                <div>
+                  <label>Sınıf</label>
+                  <div>{getGradeLabel(studentInfo.grade)}</div>
+                </div>
+                <div>
+                  <label>Şifre</label>
+                  <div>********</div>
+                </div>
+                <div style={{ gridColumn: "1 / -1", marginTop: 8 }}>
+                  <label>İlgi Alanları</label>
+                  <div>
+                    {(studentInfo.interests || []).length === 0
+                      ? "Henüz ilgi alanı eklenmemiş."
+                      : (studentInfo.interests || []).map((t) => (
+                          <span key={t.id || t} className="pill" style={{ marginRight: 6 }}>
+                            {t.name || t}
+                          </span>
+                        ))}
+                  </div>
+                </div>
+                <div style={{ gridColumn: "1 / -1", marginTop: 12 }}>
+                  <button className="btn" onClick={() => setIsEditing(true)}>
+                    Profili Düzenle
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label>Kullanıcı adı</label>
+                  <input value={form.username || ""} onChange={(e) => updateField("username", e.target.value)} />
+                </div>
+                <div>
+                  <label>E-posta</label>
+                  <div>{studentInfo.email || "-"}</div>
+                </div>
+                <div>
+                  <label>Üniversite</label>
+                  <input value={form.university || ""} onChange={(e) => updateField("university", e.target.value)} />
+                </div>
+                <div>
+                  <label>Bölüm</label>
+                  <input value={form.department || ""} onChange={(e) => updateField("department", e.target.value)} />
+                </div>
+                <div>
+                  <label>Sınıf</label>
+                  <select value={form.grade ?? ""} onChange={(e) => updateField("grade", e.target.value)}>
+                    <option value="">Seçiniz</option>
+                    {CLASS_LEVEL_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label>Yeni Şifre (isteğe bağlı)</label>
+                  <input type="password" value={form.password || ""} onChange={(e) => updateField("password", e.target.value)} />
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label>İlgi Alanları</label>
+                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Selected tags row */}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', minHeight: 42 }}>
+                      {tags.map((t, i) => (
+                        <span key={`${t}-${i}`} className="pill">
+                          {t}
+                          <button
+                            onClick={() => removeTag(i)}
+                            style={{ marginLeft: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                            aria-label={`remove-${t}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                      {customTags.map((t, i) => (
+                        <span key={`custom-${t}-${i}`} className="pill" style={{ background: '#f3f4f6' }}>
+                          {t}
+                          <button
+                            onClick={() => removeCustomTag(i)}
+                            style={{ marginLeft: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                            aria-label={`remove-custom-${t}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Recommendation input row */}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <div style={{ flex: 1, position: 'relative' }}>
+                        <input
+                          placeholder="Yeni etiket ekle (sadece öneriler)"
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onFocus={() => setShowSuggestions(true)}
+                          onKeyDown={handleTagInputKeyDown}
+                          style={{ width: '100%', minWidth: 160 }}
+                        />
+                        <button className="btn small" onClick={() => addTag(tagInput)} style={{ position: 'absolute', right: 6, top: 6 }}>Ekle</button>
+                        {showSuggestions && suggestions.length > 0 && (
+                          <div style={{ position: 'absolute', left: 0, right: 0, top: 'calc(100% + 6px)', zIndex: 9999, maxHeight: 220, overflowY: 'auto', border: '1px solid #e5e7eb', background: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.08)', padding: 4, borderRadius: 8 }}>
+                            {suggestions.map((s, i) => (
+                              <div key={s.id || `${s.name}-${i}`} style={{ padding: 8, cursor: 'pointer', borderRadius: 6 }} onMouseDown={(ev) => { ev.preventDefault(); addTag(s.name); setShowSuggestions(false); setTagInput(''); }} onMouseEnter={(e)=>e.currentTarget.style.background='#f8fafc'} onMouseLeave={(e)=>e.currentTarget.style.background='transparent'}>
+                                {s.name}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* explanatory note above custom tag input */}
+                    <div style={{ fontSize: 13, color: '#374151' }}>Eğer istediğiniz ilgi alanı listede yoksa, aşağıdan kendiniz ekleyebilirsiniz (isteğe bağlı).</div>
+
+                    {/* Custom tag row */}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input placeholder="Özel etiket (isteğe bağlı)" value={customTag} onChange={(e) => setCustomTag(e.target.value)} style={{ minWidth: 160, flex: 1 }} />
+                      <button className="btn small" onClick={() => addCustomTag(customTag)}>Özel ekle</button>
+                    </div>
+
+                    <div style={{ marginTop: 6, fontSize: 12, color: "#6b7280" }}>
+                      En fazla 10 etiket; her etiket 30 karakterden kısa olmalıdır.
+                    </div>
+                  </div>
+                </div>
+                <div style={{ gridColumn: "1 / -1", marginTop: 12, display: "flex", gap: 8 }}>
+                  <button className="btn" onClick={handleSaveProfile}>Kaydet</button>
+                  <button className="btn secondary" onClick={() => setIsEditing(false)}>İptal</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       ) : (
         <>
           <div className="card">
-            <div className="section-title">Önerilen Etkinlikler</div>
-            <p style={{ fontSize: 13, color: "#6b7280" }}>
-              İlgi alanlarınıza uygun olarak listelenmiş bazı öne çıkan
-              etkinlikler.
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div>
+                <div className="section-title">Önerilen Etkinlikler</div>
+                <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
+                  İlgi alanlarınıza uygun olarak listelenmiş bazı öne çıkan etkinlikler.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: 12 }}>Kategori:</span>
+                <select value={recCategory} onChange={(e) => setRecCategory(e.target.value)}>
+                  {recCategories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+                
+                <span style={{ fontSize: 12 }}>Üniversite:</span>
+                <select value={recUniversity} onChange={(e) => setRecUniversity(e.target.value)}>
+                  {recUniversities.map((u) => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
+                <span style={{ fontSize: 12 }}>Şehir:</span>
+                <select value={recCity} onChange={(e) => setRecCity(e.target.value)}>
+                  {recCities.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             {loading ? (
               <p>Etkinlikler yükleniyor...</p>
             ) : (
@@ -315,6 +659,7 @@ export default function StudentDashboard({
                     </option>
                   ))}
                 </select>
+                
               </div>
             </div>
 

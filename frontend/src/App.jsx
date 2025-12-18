@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import Header from "./components/Header.jsx";
-import LoginScreen from "./components/LoginScreen.jsx";
 import StudentDashboard from "./components/StudentDashboard.jsx";
 import ClubDashboard from "./components/ClubDashboard.jsx";
+import AuthPage from "./components/auth/AuthPage.jsx";
 import * as api from "./api.js";
 import { FALLBACK_CLUB, FALLBACK_STUDENT } from "./constants.js";
 import { MOCK_EVENTS } from "./mockData.js";
 
 export default function App() {
-  const [view, setView] = useState("login");
+  const [view, setView] = useState("auth"); // auth | student | club
   const [events, setEvents] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [student, setStudent] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
   const [club, setClub] = useState(null);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [globalError, setGlobalError] = useState("");
@@ -29,6 +30,25 @@ export default function App() {
     }
   }, [student?.id]);
 
+  useEffect(() => {
+    async function loadRecs() {
+      if (!student?.id) {
+        setRecommendations([]);
+        return;
+      }
+      try {
+        const res = await api.getRecommendations(student.id);
+        setRecommendations(res?.recommendations || []);
+      } catch (e) {
+        console.warn("Failed to load recommendations", e);
+        setRecommendations([]);
+      }
+    }
+    loadRecs();
+  }, [student]);
+
+  /* -------------------- DATA LOADERS -------------------- */
+
   async function loadEvents() {
     setLoadingEvents(true);
     try {
@@ -45,13 +65,42 @@ export default function App() {
     }
   }
 
+  async function loadFavorites(studentId) {
+    if (!studentId) {
+      setFavorites([]);
+      return;
+    }
+    try {
+      const ids = await api.getFavorites(studentId);
+      setFavorites(ids);
+    } catch (error) {
+      console.warn("Favoriler alınamadı.", error);
+      setFavorites([]);
+    }
+  }
+
+  /* -------------------- AUTH HANDLERS -------------------- */
+
   async function handleStudentLogin(credentials) {
     setIsAuthenticating(true);
     try {
       const response = await api.studentLogin(credentials);
+      // persist tokens
+      try {
+        if (response.access) localStorage.setItem("accessToken", response.access);
+        if (response.refresh) localStorage.setItem("refreshToken", response.refresh);
+      } catch (e) {}
+
       setStudent(response.student);
       setView("student");
       await loadFavorites(response.student.id);
+      // fetch recommendations
+      try {
+        const rec = await api.getRecommendations(response.student.id);
+        console.log("Recommendations:", rec.recommendations);
+      } catch (e) {
+        console.warn("Recommendations unavailable", e);
+      }
     } catch (error) {
       setStudent(null);
       throw error;
@@ -64,6 +113,11 @@ export default function App() {
     setIsAuthenticating(true);
     try {
       const response = await api.clubLogin(credentials);
+      try {
+        if (response.access) localStorage.setItem("accessToken", response.access);
+        if (response.refresh) localStorage.setItem("refreshToken", response.refresh);
+      } catch (e) {}
+
       setClub(response.club);
       setView("club");
     } catch (error) {
@@ -74,34 +128,33 @@ export default function App() {
     }
   }
 
+  async function handleStudentRegister(data) {
+    await api.studentRegister(data);
+  }
+
+  async function handleClubRegister(data) {
+    await api.clubRegister(data);
+  }
+
   function handleLogout() {
-    setView("login");
+    setView("auth");
     setFavorites([]);
     setStudent(null);
     setClub(null);
+    try {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+    } catch (e) {}
   }
 
-  async function loadFavorites(studentId) {
-    if (!studentId) {
-      setFavorites([]);
-      return;
-    }
-    try {
-      const ids = await api.getFavorites(studentId);
-      setFavorites(ids);
-    } catch (error) {
-      console.warn("Favoriler alınamadı, local duruma geçiliyor.", error);
-      setFavorites([]);
-    }
-  }
+  /* -------------------- FAVORITES -------------------- */
 
   async function toggleFavorite(id) {
     const isFavorite = favorites.includes(id);
+
     if (!student?.id) {
-      setFavorites((previous) =>
-        isFavorite
-          ? previous.filter((item) => item !== id)
-          : [...previous, id]
+      setFavorites((prev) =>
+        isFavorite ? prev.filter((x) => x !== id) : [...prev, id]
       );
       return;
     }
@@ -109,15 +162,17 @@ export default function App() {
     try {
       if (isFavorite) {
         await api.removeFavorite(student.id, id);
-        setFavorites((previous) => previous.filter((item) => item !== id));
+        setFavorites((prev) => prev.filter((x) => x !== id));
       } else {
         await api.addFavorite(student.id, id);
-        setFavorites((previous) => [...previous, id]);
+        setFavorites((prev) => [...prev, id]);
       }
     } catch (error) {
       console.error("Favori güncellenemedi:", error);
     }
   }
+
+  /* -------------------- EVENTS -------------------- */
 
   async function handleCreateEvent(payload) {
     if (!club?.id && !payload.club_id) {
@@ -128,7 +183,7 @@ export default function App() {
       club_id: payload.club_id || club.id,
     };
     const created = await api.createEvent(requestPayload);
-    setEvents((previous) => [...previous, created]);
+    setEvents((prev) => [...prev, created]);
     return created;
   }
 
@@ -139,10 +194,12 @@ export default function App() {
     const response = await api.joinEvent(eventId, {
       student_id: student.id,
     });
+
     const updatedEvent = response.event;
-    setEvents((previous) =>
-      previous.map((event) => (event.id === updatedEvent.id ? updatedEvent : event))
+    setEvents((prev) =>
+      prev.map((e) => (e.id === updatedEvent.id ? updatedEvent : e))
     );
+
     const isWaitListed = response.status === "waitlisted";
     return {
       title: isWaitListed ? "Bekleme Listesine Alındınız" : "Katılım İsteği",
@@ -150,34 +207,31 @@ export default function App() {
     };
   }
 
-  async function handleStudentRegister(data) {
-    await api.studentRegister(data);
-  }
-
-  async function handleClubRegister(data) {
-    await api.clubRegister(data);
-  }
-
   const studentData = student || FALLBACK_STUDENT;
   const clubData = club || FALLBACK_CLUB;
+
+  /* -------------------- RENDER -------------------- */
 
   return (
     <div className="app-shell">
       <Header view={view} onLogout={handleLogout} />
+
       {globalError && (
         <div className="card" style={{ margin: 16 }}>
           <strong>Uyarı:</strong> {globalError}
         </div>
       )}
-      {view === "login" && (
-        <LoginScreen
-          onStudentSubmit={handleStudentLogin}
-          onClubSubmit={handleClubLogin}
+
+      {view === "auth" && (
+        <AuthPage
+          onStudentLogin={handleStudentLogin}
+          onClubLogin={handleClubLogin}
           onStudentRegister={handleStudentRegister}
           onClubRegister={handleClubRegister}
           disabled={isAuthenticating}
         />
       )}
+
       {view === "student" && (
         <StudentDashboard
           events={events}
@@ -186,8 +240,11 @@ export default function App() {
           onJoinEvent={handleJoinEvent}
           loading={loadingEvents}
           student={studentData}
+          recommendations={recommendations}
+          onUpdateStudent={setStudent}
         />
       )}
+
       {view === "club" && (
         <ClubDashboard
           events={events}
@@ -195,7 +252,10 @@ export default function App() {
           club={clubData}
         />
       )}
-      <footer>UniConnect – Üniversite Kulüp ve Etkinlik Yönetim Platformu</footer>
+
+      <footer>
+        UniConnect – Üniversite Kulüp ve Etkinlik Yönetim Platformu
+      </footer>
     </div>
   );
 }

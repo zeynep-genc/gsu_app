@@ -18,3 +18,12 @@ export const FALLBACK_CLUB = {
   description:
     "GSÜ Bilgisayar Mühendisliği Kulübü, yazılım, yapay zeka ve veri bilimi konularında etkinlikler düzenler.",
 };
+export const CLASS_LEVEL_OPTIONS = [
+  { value: 0, label: "Hazırlık" },
+  { value: 1, label: "1" },
+  { value: 2, label: "2" },
+  { value: 3, label: "3" },
+  { value: 4, label: "4" },
+  { value: 5, label: "5" },
+  { value: 6, label: "6" },
+];
