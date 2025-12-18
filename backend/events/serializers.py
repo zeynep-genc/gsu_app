@@ -79,6 +79,8 @@ class EventSerializer(serializers.ModelSerializer):
 
 
 class StudentSerializer(serializers.ModelSerializer):
+    interests = TagSerializer(many=True, read_only=True)
+
     class Meta:
         model = Student
         fields = (
@@ -88,11 +90,16 @@ class StudentSerializer(serializers.ModelSerializer):
             "university",
             "department",
             "grade",
+            "interests",
         )
 
 
 class StudentRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
+    username = serializers.CharField(required=False, allow_blank=True)
+    tag_names = serializers.ListField(
+        child=serializers.CharField(), write_only=True, required=False, allow_empty=True
+    )
 
     class Meta:
         model = Student
@@ -108,10 +115,96 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop("password")
+        tag_names = validated_data.pop("tag_names", [])
+
+        # Ensure grade is stored as integer. Accept strings like "hazirlik" or numeric strings.
+        raw_grade = validated_data.get("grade")
+        if isinstance(raw_grade, str):
+            if raw_grade.lower() == "hazirlik":
+                validated_data["grade"] = 0
+            else:
+                try:
+                    validated_data["grade"] = int(raw_grade)
+                except (TypeError, ValueError):
+                    validated_data["grade"] = 1
+
+        # If username not provided, derive from email local-part
+        if not validated_data.get("username"):
+            email = validated_data.get("email", "")
+            base = email.split("@")[0] if "@" in email else (email or "user")
+            username = base
+            # Ensure uniqueness
+            counter = 1
+            while Student.objects.filter(username=username).exists():
+                username = f"{base}{counter}"
+                counter += 1
+            validated_data["username"] = username
+
         student = Student(**validated_data)
         student.set_password(password)
         student.save()
+
+        # assign interests from tag_names
+        if tag_names:
+            normalized = []
+            for raw in tag_names:
+                stripped = raw.strip().lower()
+                if stripped:
+                    normalized.append(stripped)
+            tags = []
+            for name in normalized:
+                tag, _ = Tag.objects.get_or_create(name=name)
+                tags.append(tag)
+            student.interests.set(tags)
+
         return student
+
+
+class StudentUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating student profile, including interests via tag names."""
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    tag_names = serializers.ListField(
+        child=serializers.CharField(), write_only=True, required=False, allow_empty=True
+    )
+
+    class Meta:
+        model = Student
+        fields = (
+            "email",
+            "username",
+            "university",
+            "department",
+            "grade",
+            "password",
+            "tag_names",
+        )
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        tag_names = validated_data.pop("tag_names", None)
+
+        for key, val in validated_data.items():
+            setattr(instance, key, val)
+
+        if password:
+            instance.set_password(password)
+
+        instance.save()
+
+        if tag_names is not None:
+            # assign interests from tag_names
+            normalized = []
+            for raw in tag_names:
+                stripped = raw.strip().lower()
+                if stripped:
+                    normalized.append(stripped)
+            tags = []
+            for name in normalized:
+                tag, _ = Tag.objects.get_or_create(name=name)
+                tags.append(tag)
+            instance.interests.set(tags)
+
+        return instance
 
 
 class ClubAuthSerializer(serializers.ModelSerializer):
