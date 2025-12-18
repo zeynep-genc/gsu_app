@@ -52,7 +52,3 @@ Varsayılan olarak frontend, `http://localhost:8000/api` adresine istek atar. Fa
 - `backend/events/serializers.py`: JSON dönüştürücüler.
 - `backend/events/views.py` içinde favori uç noktaları bulunur; frontend favorileri kalıcı olarak PostgreSQL’de tutar.
 
-## Sonraki Adımlar
-- Django tarafında gerçek kimlik doğrulaması (JWT, session vb.) ekleyebilirsiniz.
-- PostgreSQL üzerinde migration oluşturup CI/CD sürecine dahil edin.
-- Frontend için bir durum yönetim kütüphanesi (Redux, Zustand) ve otomatik testler eklenebilir.
