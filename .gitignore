@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Django / local
+*.sqlite3
+.env
+.env.*
+*.log
+
+# venv
+venv/
+.venv/
+backend/.venv/
+backend/.venv*/
+
+# Frontend
+node_modules/
+dist/
+build/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# PDFs / docs (opsiyonel)
+*.pdf
