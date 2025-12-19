@@ -107,7 +107,7 @@ export default function App() {
     }
   }
 
-  /* -------------------- AUTH HANDLERS -------------------- */
+  //auth
 
   async function handleStudentLogin(credentials) {
     setIsAuthenticating(true);
@@ -176,7 +176,6 @@ export default function App() {
     clearSession();
   }
 
-  /* -------------------- FAVORITES -------------------- */
 
   async function toggleFavorite(id) {
     const isFavorite = favorites.includes(id);
@@ -201,7 +200,7 @@ export default function App() {
     }
   }
 
-  /* -------------------- EVENTS -------------------- */
+  //events
 
   async function handleCreateEvent(payload) {
     if (!club?.id && !payload.club_id) {
@@ -239,7 +238,7 @@ export default function App() {
   const studentData = student || FALLBACK_STUDENT;
   const clubData = club || FALLBACK_CLUB;
 
-  /* -------------------- RENDER -------------------- */
+  //render
 
   return (
     <div className="app-shell">

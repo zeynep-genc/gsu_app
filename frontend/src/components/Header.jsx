@@ -1,8 +1,14 @@
+import logo from "../assets/logo.png";
+
 export default function Header({ view, onLogout }) {
   return (
     <header>
       <div>
-        <h1>UniConnect</h1>
+        <div className="header-brand">
+          <img src={logo} alt="UniConnect" />
+          <span>UniConnect</span>
+        </div>
+
         <span className="subtitle">
           Türkiye üniversite kulüp ve etkinlik yönetim platformu
         </span>
