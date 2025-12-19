@@ -263,6 +263,7 @@ class ClubUpdateSerializer(serializers.ModelSerializer):
 
 class ParticipationSerializer(serializers.ModelSerializer):
     student = StudentSerializer(read_only=True)
+    event = EventSerializer(read_only=True)
 
     class Meta:
         model = Participation
