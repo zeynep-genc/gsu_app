@@ -261,6 +261,7 @@ export default function App() {
           onStudentRegister={handleStudentRegister}
           onClubRegister={handleClubRegister}
           disabled={isAuthenticating}
+          view={view}
         />
       )}
 

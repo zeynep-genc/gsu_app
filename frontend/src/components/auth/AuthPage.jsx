@@ -15,6 +15,7 @@ export default function AuthPage({
   onStudentRegister,
   onClubRegister,
   disabled,
+  view,
 }) {
   const [role, setRole] = useState(null); // "student" | "club" | null
   const [mode, setMode] = useState("login"); // "login" | "register"
@@ -45,6 +46,12 @@ export default function AuthPage({
     if (isOpen) window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (view !== "auth") {
+      closeModal();
+    }
+  }, [view]);
 
   return (
     <>
