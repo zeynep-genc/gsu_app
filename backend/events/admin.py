@@ -5,7 +5,7 @@ from .models import Club, Event, Favorite, Participation, Student, Tag
 
 @admin.register(Club)
 class ClubAdmin(admin.ModelAdmin):
-    list_display = ("name", "university", "city")
+    list_display = ("name", "university")
     search_fields = ("name", "university")
 
 
