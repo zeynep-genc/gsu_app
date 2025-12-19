@@ -15,7 +15,7 @@ class TimeStampedModel(models.Model):
 class Club(TimeStampedModel):
     name = models.CharField(max_length=255)
     university = models.CharField(max_length=255)
-    ccity = models.CharField(max_length=120, blank=True, default="")
+    city = models.CharField(max_length=120, blank=True, default="")
     description = models.TextField(blank=True)
     email = models.EmailField(blank=True)
     password = models.CharField(max_length=128)
