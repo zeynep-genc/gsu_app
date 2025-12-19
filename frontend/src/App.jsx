@@ -7,16 +7,42 @@ import * as api from "./api.js";
 import { FALLBACK_CLUB, FALLBACK_STUDENT } from "./constants.js";
 import { MOCK_EVENTS } from "./mockData.js";
 
+const SESSION_KEY = "uniconnect_session";
+
+function saveSession(session) {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } catch (e) {}
+}
+
+function readSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function clearSession() {
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch (e) {}
+}
+
+
 export default function App() {
-  const [view, setView] = useState("auth"); // auth | student | club
   const [events, setEvents] = useState([]);
   const [favorites, setFavorites] = useState([]);
-  const [student, setStudent] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
-  const [club, setClub] = useState(null);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [globalError, setGlobalError] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [view, setView] = useState(() => readSession()?.view || "auth");
+  const [student, setStudent] = useState(() => readSession()?.student || null);
+  const [club, setClub] = useState(() => readSession()?.club || null);
+
+
 
   useEffect(() => {
     loadEvents();
@@ -46,8 +72,10 @@ export default function App() {
     }
     loadRecs();
   }, [student]);
+  useEffect(() => {
+    saveSession({ view, student, club });
+  }, [view, student, club]);
 
-  /* -------------------- DATA LOADERS -------------------- */
 
   async function loadEvents() {
     setLoadingEvents(true);
@@ -145,6 +173,7 @@ export default function App() {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
     } catch (e) {}
+    clearSession();
   }
 
   /* -------------------- FAVORITES -------------------- */

@@ -96,7 +96,7 @@ export async function joinEvent(eventId, payload) {
   });
 }
 
-/* -------------------- AUTH -------------------- */
+
 
 export async function studentLogin(payload) {
   return request("/auth/student-login/", {
