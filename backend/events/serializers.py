@@ -213,6 +213,7 @@ class ClubAuthSerializer(serializers.ModelSerializer):
 
 class ClubRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
+    city = serializers.CharField(required=False, allow_blank=True, default="")
 
     class Meta:
         model = Club

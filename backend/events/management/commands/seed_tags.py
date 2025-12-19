@@ -81,7 +81,6 @@ CURATED_TAGS = [
     "endüstri ürünleri tasarımı",
     "gıda mühendisliği",
     "çeşitlilik ve kapsayıcılık",
-    # (Universitiy names removed — seeding only interest/department tags)
     # Technology / tools
     "python",
     "javascript",
