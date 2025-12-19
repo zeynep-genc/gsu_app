@@ -130,7 +130,7 @@ def seed_tags(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("events", "0004_previous"),
+    ("events", "0003_student_interests"),
     ]
     operations = [
         migrations.RunPython(seed_tags),
