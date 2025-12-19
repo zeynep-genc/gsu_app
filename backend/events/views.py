@@ -13,6 +13,7 @@ from .models import Club, Event, Favorite, Participation, Student, Tag
 from .serializers import (
     ClubAuthSerializer,
     ClubRegistrationSerializer,
+    ClubUpdateSerializer,
     EventSerializer,
     FavoriteSerializer,
     StudentRegistrationSerializer,
@@ -268,3 +269,20 @@ class StudentProfileView(APIView):
         serializer.is_valid(raise_exception=True)
         student = serializer.save()
         return Response({"message": "Profil güncellendi.", "student": StudentSerializer(student).data})
+
+
+class ClubProfileView(APIView):
+    """Retrieve or update a club profile by PK."""
+
+    def get(self, request, pk=None):
+        club = get_object_or_404(Club, pk=pk)
+        return Response(ClubAuthSerializer(club).data)
+
+    def patch(self, request, pk=None):
+        club = get_object_or_404(Club, pk=pk)
+        serializer = ClubUpdateSerializer(club, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        club = serializer.save()
+        return Response(
+            {"message": "Kulüp güncellendi.", "club": ClubAuthSerializer(club).data}
+        )

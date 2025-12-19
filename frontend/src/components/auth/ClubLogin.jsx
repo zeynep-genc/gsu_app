@@ -9,10 +9,25 @@ export default function ClubLogin({ onSubmit, disabled }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    const trimmedUniversity = (university || "").trim();
+    const trimmedClub = (clubName || "").trim();
+    if (!trimmedUniversity) {
+      setError("Üniversite adı zorunludur.");
+      return;
+    }
+    if (!trimmedClub) {
+      setError("Kulüp adı giriniz.");
+      return;
+    }
+    if (!password) {
+      setError("Şifrenizi girin.");
+      return;
+    }
+
     try {
       await onSubmit({
-        university,
-        club_name: clubName,
+        university: trimmedUniversity,
+        club_name: trimmedClub,
         password,
       });
     } catch (err) {

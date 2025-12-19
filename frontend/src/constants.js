@@ -17,6 +17,7 @@ export const FALLBACK_CLUB = {
   city: "İstanbul",
   description:
     "GSÜ Bilgisayar Mühendisliği Kulübü, yazılım, yapay zeka ve veri bilimi konularında etkinlikler düzenler.",
+  email: "demo@gsu.edu.tr",
 };
 export const CLASS_LEVEL_OPTIONS = [
   { value: 0, label: "Hazırlık" },

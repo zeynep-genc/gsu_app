@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_MAP_URL, FALLBACK_CLUB } from "../constants.js";
 import Modal from "./Modal.jsx";
+import * as api from "../api.js";
 
 function normalizeClub(club) {
   if (!club) {
@@ -12,6 +13,7 @@ function normalizeClub(club) {
     university: club.university,
     city: club.city,
     description: club.description,
+    email: club.email,
   };
 }
 
@@ -40,23 +42,41 @@ function getWaiting(event) {
   );
 }
 
-export default function ClubDashboard({ events, onCreateEvent, club }) {
+export default function ClubDashboard({
+  events,
+  onCreateEvent,
+  club,
+  onUpdateClub,
+}) {
   const [activeTab, setActiveTab] = useState("events");
-  const [clubProfile, setClubProfile] = useState(normalizeClub(club));
-  const [form, setForm] = useState({
+  const [clubProfile, setClubProfile] = useState(() => normalizeClub(club));
+  const [form, setForm] = useState(() => ({
     title: "",
     date: "",
     category: "",
-    mapUrl: "",
-    tags: "",
+    address: "",
+    city: club?.city || FALLBACK_CLUB.city,
     capacity: 50,
-  });
+  }));
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [tagInput, setTagInput] = useState("");
+  const [tagSuggestions, setTagSuggestions] = useState([]);
+  const [tagHelper, setTagHelper] = useState("");
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
   const [statsEvent, setStatsEvent] = useState(null);
+  const [profileMessage, setProfileMessage] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState(false);
+  const tagTimer = useRef(null);
 
   useEffect(() => {
-    setClubProfile(normalizeClub(club));
+    const normalized = normalizeClub(club);
+    setClubProfile(normalized);
+    setForm((previous) => ({
+      ...previous,
+      city: normalized.city || previous.city,
+    }));
   }, [club]);
 
   const clubEvents = useMemo(() => {
@@ -71,6 +91,25 @@ export default function ClubDashboard({ events, onCreateEvent, club }) {
     });
   }, [events, clubProfile]);
 
+  const categoryOptions = useMemo(() => {
+    const categories = new Set();
+    events.forEach((event) => {
+      if (event.category) {
+        categories.add(event.category);
+      }
+    });
+    return Array.from(categories).slice(0, 8);
+  }, [events]);
+
+  const filteredTagSuggestions = useMemo(() => {
+    return tagSuggestions.filter((suggestion) => {
+      const name = parseSuggestion(suggestion).toLowerCase();
+      return !selectedTags.some(
+        (existing) => existing.toLowerCase() === name
+      );
+    });
+  }, [tagSuggestions, selectedTags]);
+
   function getClubName(event) {
     if (event.club && event.club.name) return event.club.name;
     return event.club || "-";
@@ -81,39 +120,152 @@ export default function ClubDashboard({ events, onCreateEvent, club }) {
     setForm((previous) => ({ ...previous, [name]: value }));
   }
 
+  function handleSelectCategory(value) {
+    setForm((previous) => ({ ...previous, category: value }));
+  }
+
+  function addTag(name) {
+    const normalized = (name || "").trim();
+    if (!normalized) return;
+    const alreadySelected = selectedTags.some(
+      (existing) => existing.toLowerCase() === normalized.toLowerCase()
+    );
+    if (alreadySelected) {
+      setTagHelper("Bu etiket zaten eklendi.");
+      return;
+    }
+    setSelectedTags((previous) => [...previous, normalized]);
+    setTagHelper("");
+  }
+
+  function parseSuggestion(item) {
+    if (!item) return "";
+    if (typeof item === "string") return item;
+    return item.name || "";
+  }
+
+  function attemptTagAdd() {
+    const query = (tagInput || "").trim().toLowerCase();
+    if (!query) {
+      setTagHelper("Etiket arayın veya önerilerden seçin.");
+      return;
+    }
+    const match =
+      tagSuggestions.find(
+        (item) => parseSuggestion(item).toLowerCase() === query
+      ) ||
+      tagSuggestions.find((item) =>
+        parseSuggestion(item).toLowerCase().includes(query)
+      );
+    if (!match) {
+      setTagHelper("Lütfen önerilen bir etiketi seçin.");
+      return;
+    }
+    addTag(parseSuggestion(match));
+    setTagInput("");
+  }
+
+  function handleTagInputKeyDown(e) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      attemptTagAdd();
+    }
+  }
+
+  function handleTagSuggestionClick(item) {
+    addTag(parseSuggestion(item));
+    setTagInput("");
+  }
+
+  function removeTag(tag) {
+    setSelectedTags((previous) =>
+      previous.filter((existing) => existing !== tag)
+    );
+  }
+
+  useEffect(() => {
+    if (tagTimer.current) {
+      clearTimeout(tagTimer.current);
+    }
+    const query = (tagInput || "").trim();
+    if (!query) {
+      setTagSuggestions([]);
+      return;
+    }
+
+    tagTimer.current = window.setTimeout(async () => {
+      try {
+        const res = await api.getTags(query);
+        const formatted = Array.isArray(res)
+          ? res
+              .map((item) => ({ name: parseSuggestion(item) }))
+              .filter((item) => item.name)
+          : [];
+        setTagSuggestions(formatted.slice(0, 8));
+      } catch (err) {
+        console.warn("Tag suggestions failed", err);
+        setTagSuggestions([]);
+      }
+    }, 250);
+
+    return () => {
+      if (tagTimer.current) {
+        clearTimeout(tagTimer.current);
+        tagTimer.current = null;
+      }
+    };
+  }, [tagInput]);
+
   async function handleSubmit(event) {
     event.preventDefault();
     setInfo("");
     setError("");
-    if (!form.title || !form.date || !form.category) {
+    const title = (form.title || "").trim();
+    const category = (form.category || "").trim();
+    const city = (form.city || "").trim();
+
+    if (!title || !form.date || !category) {
       setError("Lütfen zorunlu alanları doldurunuz.");
       return;
     }
+    if (!city) {
+      setError("Etkinliğin yapılacağı şehir zorunludur.");
+      return;
+    }
     const capacityNumber = Number(form.capacity) || 0;
+    const hasAddress = (form.address || "").trim();
+    const mapUrl = hasAddress
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          hasAddress
+        )}`
+      : DEFAULT_MAP_URL;
     try {
       const payload = {
-        title: form.title,
+        title,
         date: form.date,
-        category: form.category,
-        city: clubProfile.city,
+        category,
+        city,
         university: clubProfile.university,
         capacity: capacityNumber > 0 ? capacityNumber : 50,
-        map_url: form.mapUrl || DEFAULT_MAP_URL,
+        map_url: mapUrl,
         club_id: clubProfile.id,
-        tag_names: form.tags
-          ? form.tags.split(",").map((tag) => tag.trim())
-          : [],
+        tag_names: selectedTags,
       };
       await onCreateEvent?.(payload);
       setInfo("Etkinlik eklendi.");
-      setForm({
+      setForm((previous) => ({
+        ...previous,
         title: "",
         date: "",
         category: "",
-        mapUrl: "",
-        tags: "",
+        address: "",
         capacity: 50,
-      });
+        city: clubProfile.city,
+      }));
+      setSelectedTags([]);
+      setTagInput("");
+      setTagSuggestions([]);
+      setTagHelper("");
     } catch (submitError) {
       setError(
         submitError.message ||
@@ -122,9 +274,55 @@ export default function ClubDashboard({ events, onCreateEvent, club }) {
     }
   }
 
+  function openMapPreview() {
+    const query =
+      (form.address || "").trim() ||
+      `${form.city || clubProfile.city} ${form.title || clubProfile.name || "kulüp etkinliği"}`.trim();
+    const url = query
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          query
+        )}`
+      : DEFAULT_MAP_URL;
+    window.open(url, "event-location", "width=900,height=600");
+  }
+
   function handleProfileChange(event) {
     const { name, value } = event.target;
     setClubProfile((previous) => ({ ...previous, [name]: value }));
+  }
+
+  async function handleSaveProfile() {
+    setProfileMessage("");
+    setProfileError(false);
+    setIsSavingProfile(true);
+    try {
+      const payload = {
+        name: clubProfile.name,
+        university: clubProfile.university,
+        city: clubProfile.city,
+        description: clubProfile.description,
+        email: clubProfile.email,
+      };
+      const response = await api.updateClub(clubProfile.id, payload);
+      const updatedClub = response?.club || response;
+      const normalized = normalizeClub(updatedClub);
+      setClubProfile(normalized);
+      setProfileMessage("Kulüp bilgileri kaydedildi.");
+      setProfileError(false);
+      onUpdateClub?.(updatedClub);
+    } catch (err) {
+      setProfileMessage(err.message || "Güncelleme başarısız.");
+      setProfileError(true);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  }
+
+  function handleResetProfile() {
+    const normalized = normalizeClub(club);
+    setClubProfile(normalized);
+    setProfileMessage("");
+    setProfileError(false);
   }
 
   if (!clubProfile?.id) {
@@ -204,9 +402,9 @@ export default function ClubDashboard({ events, onCreateEvent, club }) {
                         <div className="event-meta">
                           {event.date} · {event.category}
                         </div>
-                        <div>
+                        <div className="tag-selected">
                           {tags.map((tag) => (
-                            <span key={`${event.id}-${tag}`} className="pill">
+                            <span key={`${event.id}-${tag}`} className="tag-chip">
                               {tag}
                             </span>
                           ))}
@@ -276,6 +474,26 @@ export default function ClubDashboard({ events, onCreateEvent, club }) {
                 />
 
                 <label>Kategori *</label>
+                <div className="category-suggestion-bar">
+                  {categoryOptions.length === 0 ? (
+                    <span className="helper-text">
+                      Henüz önerilen kategori yok.
+                    </span>
+                  ) : (
+                    categoryOptions.map((option) => (
+                      <button
+                        type="button"
+                        key={option}
+                        className={`category-chip ${
+                          form.category === option ? "active" : ""
+                        }`}
+                        onClick={() => handleSelectCategory(option)}
+                      >
+                        {option}
+                      </button>
+                    ))
+                  )}
+                </div>
                 <input
                   name="category"
                   value={form.category}
@@ -283,18 +501,30 @@ export default function ClubDashboard({ events, onCreateEvent, club }) {
                   placeholder="Teknoloji / Kariyer / Sosyal ..."
                 />
 
-                <label>
-                  Harita Bağlantısı / Embed Adresi{" "}
-                  <span style={{ fontSize: 11, color: "#6b7280" }}>
-                    (OpenStreetMap / Google Maps embed veya bağlantı)
-                  </span>
-                </label>
+                <label>Şehir *</label>
                 <input
-                  name="mapUrl"
-                  value={form.mapUrl}
+                  name="city"
+                  value={form.city}
                   onChange={handleChange}
-                  placeholder="Örn: https://www.openstreetmap.org/export/embed.html?..."
+                  placeholder="Örn: İstanbul"
                 />
+
+                <label>Adres</label>
+                <div className="address-input-row">
+                  <input
+                    name="address"
+                    value={form.address}
+                    onChange={handleChange}
+                    placeholder="Örn: Galatasaray Üniversitesi, Beyoğlu"
+                  />
+                  <button
+                    type="button"
+                    className="btn small secondary"
+                    onClick={openMapPreview}
+                  >
+                    Haritada gör
+                  </button>
+                </div>
 
                 <label>Kapasite (kişi)</label>
                 <input
@@ -306,26 +536,63 @@ export default function ClubDashboard({ events, onCreateEvent, club }) {
                   placeholder="Örn: 50"
                 />
 
-                <label>Etiketler (virgülle ayırın)</label>
-                <input
-                  name="tags"
-                  value={form.tags}
-                  onChange={handleChange}
-                  placeholder="yapay zeka, veri bilimi"
-                />
+                <label>Etiketler (opsiyonel)</label>
+                <div className="tag-input-wrapper">
+                  <input
+                    name="tagInput"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                    placeholder="Etiket ara veya önerilerden seç"
+                  />
+                  <button
+                    type="button"
+                    className="btn small secondary"
+                    onClick={attemptTagAdd}
+                  >
+                    Ekle
+                  </button>
+                </div>
+                {tagHelper && <p className="helper-text">{tagHelper}</p>}
+                {filteredTagSuggestions.length > 0 && (
+                  <div className="tag-suggestions">
+                    {filteredTagSuggestions.map((suggestion, index) => (
+                      <button
+                        type="button"
+                        key={`${suggestion.name}-${index}`}
+                        className="tag-suggestion"
+                        onClick={() => handleTagSuggestionClick(suggestion)}
+                      >
+                        {suggestion.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {selectedTags.length > 0 && (
+                  <div className="tag-selected">
+                    {selectedTags.map((tag) => (
+                      <span key={tag} className="tag-chip">
+                        <span>{tag}</span>
+                        <button type="button" onClick={() => removeTag(tag)}>
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <p
                   style={{
                     fontSize: 12,
                     color: "#6b7280",
-                    marginTop: 4,
+                    marginTop: 8,
                     marginBottom: 8,
                   }}
                 >
                   Bu etkinlik{" "}
                   <strong>
                     {clubProfile.university} – {clubProfile.name},{" "}
-                    {clubProfile.city}
+                    {form.city || clubProfile.city}
                   </strong>{" "}
                   adına kaydedilecektir.
                 </p>
@@ -397,6 +664,15 @@ export default function ClubDashboard({ events, onCreateEvent, club }) {
                 placeholder="Örn: İstanbul"
               />
 
+              <label>Sorumlu Hoca E-posta</label>
+              <input
+                name="email"
+                type="email"
+                value={clubProfile.email || ""}
+                onChange={handleProfileChange}
+                placeholder="Örn: hoca@gsu.edu.tr"
+              />
+
               <label>Kulüp Açıklaması</label>
               <textarea
                 name="description"
@@ -404,6 +680,36 @@ export default function ClubDashboard({ events, onCreateEvent, club }) {
                 onChange={handleProfileChange}
                 placeholder="Kulübünüzün amacı, düzenlediği etkinlikler vb."
               ></textarea>
+
+              <div className="profile-actions">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={handleSaveProfile}
+                  disabled={isSavingProfile}
+                >
+                  {isSavingProfile ? "Kaydediliyor..." : "Kaydet"}
+                </button>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={handleResetProfile}
+                  disabled={isSavingProfile}
+                >
+                  Sıfırla
+                </button>
+              </div>
+              {profileMessage && (
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: profileError ? "#dc2626" : "#16a34a",
+                    marginTop: 4,
+                  }}
+                >
+                  {profileMessage}
+                </p>
+              )}
 
               <p
                 style={{

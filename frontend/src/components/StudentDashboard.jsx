@@ -397,7 +397,7 @@ export default function StudentDashboard({
                     {(studentInfo.interests || []).length === 0
                       ? "Henüz ilgi alanı eklenmemiş."
                       : (studentInfo.interests || []).map((t) => (
-                          <span key={t.id || t} className="pill" style={{ marginRight: 6 }}>
+                          <span key={t.id || t} className="tag-chip">
                             {t.name || t}
                           </span>
                         ))}
@@ -446,32 +446,32 @@ export default function StudentDashboard({
                   <label>İlgi Alanları</label>
                   <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {/* Selected tags row */}
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', minHeight: 42 }}>
-                      {tags.map((t, i) => (
-                        <span key={`${t}-${i}`} className="pill">
-                          {t}
-                          <button
-                            onClick={() => removeTag(i)}
-                            style={{ marginLeft: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}
-                            aria-label={`remove-${t}`}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                      {customTags.map((t, i) => (
-                        <span key={`custom-${t}-${i}`} className="pill" style={{ background: '#f3f4f6' }}>
-                          {t}
-                          <button
-                            onClick={() => removeCustomTag(i)}
-                            style={{ marginLeft: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}
-                            aria-label={`remove-custom-${t}`}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', minHeight: 42 }}>
+                        {tags.map((t, i) => (
+                          <span key={`${t}-${i}`} className="tag-chip">
+                            {t}
+                            <button
+                              onClick={() => removeTag(i)}
+                              style={{ marginLeft: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                              aria-label={`remove-${t}`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                        {customTags.map((t, i) => (
+                          <span key={`custom-${t}-${i}`} className="tag-chip">
+                            {t}
+                            <button
+                              onClick={() => removeCustomTag(i)}
+                              style={{ marginLeft: 6, border: 'none', background: 'transparent', cursor: 'pointer' }}
+                              aria-label={`remove-custom-${t}`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
 
                     {/* Recommendation input row */}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -577,9 +577,9 @@ export default function StudentDashboard({
                         <div className="event-meta">
                           {getClubName(event)} · {event.date} · {event.category}
                         </div>
-                        <div>
+                        <div className="tag-selected">
                           {tags.map((tag) => (
-                            <span key={`${event.id}-${tag}`} className="pill">
+                            <span key={`${event.id}-${tag}`} className="tag-chip">
                               {tag}
                             </span>
                           ))}
@@ -693,9 +693,9 @@ export default function StudentDashboard({
                         <div className="event-meta">
                           {getClubName(event)} · {event.date} · {event.category}
                         </div>
-                        <div>
+                        <div className="tag-selected">
                           {tags.map((tag) => (
-                            <span key={`${event.id}-${tag}`} className="pill">
+                            <span key={`${event.id}-${tag}`} className="tag-chip">
                               {tag}
                             </span>
                           ))}
@@ -759,9 +759,9 @@ export default function StudentDashboard({
                         <div className="event-meta">
                           {getClubName(event)} · {event.date} · {event.category}
                         </div>
-                        <div>
+                        <div className="tag-selected">
                           {tags.map((tag) => (
-                            <span key={`${event.id}-${tag}`} className="pill">
+                            <span key={`${event.id}-${tag}`} className="tag-chip">
                               {tag}
                             </span>
                           ))}

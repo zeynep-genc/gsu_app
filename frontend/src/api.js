@@ -126,6 +126,13 @@ export async function clubRegister(payload) {
   });
 }
 
+export async function updateClub(clubId, payload) {
+  return request(`/clubs/${encodeURIComponent(clubId)}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 /* -------------------- FAVORITES -------------------- */
 
 export async function getFavorites(studentId) {

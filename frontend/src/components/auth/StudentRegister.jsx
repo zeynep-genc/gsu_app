@@ -1,25 +1,48 @@
 import { useState } from "react";
 import { CLASS_LEVEL_OPTIONS } from "../../constants";
 
+const EDU_EMAIL_REGEX = /^[^@]+@[^@]+\.edu\.tr$/i;
+
 export default function StudentRegister({ onSubmit, disabled }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [university, setUniversity] = useState("");
   const [department, setDepartment] = useState("");
-  const [grade, setGrade] = useState(0); 
+  const [grade, setGrade] = useState("");
   const [error, setError] = useState("");
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
+    const trimmedEmail = (email || "").trim().toLowerCase();
+    if (!university.trim()) {
+      setError("Üniversite bilgisi zorunludur.");
+      return;
+    }
+    if (!department.trim()) {
+      setError("Bölüm bilgisi zorunludur.");
+      return;
+    }
+    if (!trimmedEmail || !EDU_EMAIL_REGEX.test(trimmedEmail)) {
+      setError("Lütfen edu.tr uzantılı üniversite e-postası giriniz.");
+      return;
+    }
+    if (!password) {
+      setError("Şifre belirleyin.");
+      return;
+    }
+
+    const payload = {
+      email: trimmedEmail,
+      password,
+      university: university.trim(),
+      department: department.trim(),
+    };
+    if (grade !== "") {
+      payload.grade = Number(grade);
+    }
+
     try {
-      const payload = {
-        email,
-        password,
-        university,
-        department,
-        grade,
-      };
       await onSubmit(payload);
     } catch (err) {
       setError(err.message || "Kayıt başarısız");
@@ -40,7 +63,8 @@ export default function StudentRegister({ onSubmit, disabled }) {
         onChange={(e) => setDepartment(e.target.value)}
       />
 
-      <select value={grade} onChange={(e) => setGrade(parseInt(e.target.value, 10))}>
+      <select value={grade} onChange={(e) => setGrade(e.target.value)}>
+        <option value="">Sınıf (opsiyonel)</option>
         {CLASS_LEVEL_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
@@ -49,10 +73,14 @@ export default function StudentRegister({ onSubmit, disabled }) {
       </select>
 
       <input
-        placeholder="E-posta"
+        placeholder="E-postanız (edu.tr)"
+        type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
+      <small style={{ fontSize: 11, color: "#6b7280" }}>
+        Hem öğrenciler hem akademisyenler için edu.tr uzantısı zorunlu.
+      </small>
 
       <input
         type="password"

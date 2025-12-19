@@ -235,6 +235,25 @@ class ClubRegistrationSerializer(serializers.ModelSerializer):
         return club
 
 
+class ClubUpdateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = Club
+        fields = ("name", "university", "city", "description", "email", "password")
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+
+        for key, value in validated_data.items():
+            setattr(instance, key, value)
+
+        if password:
+            instance.set_password(password)
+
+        instance.save()
+        return instance
+
 class ParticipationSerializer(serializers.ModelSerializer):
     student = StudentSerializer(read_only=True)
 

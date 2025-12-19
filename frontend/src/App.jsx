@@ -278,6 +278,7 @@ export default function App() {
           events={events}
           onCreateEvent={handleCreateEvent}
           club={clubData}
+          onUpdateClub={setClub}
         />
       )}
 
