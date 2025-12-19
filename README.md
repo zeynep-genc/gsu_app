@@ -1,6 +1,6 @@
 # UniConnect Tam Yığın Mimarisi
 
-Bu proje, tek bir `index.html` dosyasındaki prototipi React (frontend), Django REST (backend) ve PostgreSQL (veritabanı) katmanlarına ayrılmış gerçek bir uygulama mimarisine dönüştürür.
+Bu proje,  React (frontend), Django REST (backend) ve PostgreSQL (veritabanı) katmanlarına ayrılmış bir uygulama mimarisinden oluşur.
 
 ## Proje Yapısı
 

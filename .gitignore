@@ -9,6 +9,7 @@ __pycache__/
 .env
 .env.*
 *.log
+!.env.example
 
 # venv
 venv/
@@ -27,5 +28,6 @@ build/
 .idea/
 .vscode/
 
-# PDFs / docs (opsiyonel)
+# PDFs / docs
 *.pdf
+*.docx
