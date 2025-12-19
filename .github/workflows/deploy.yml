@@ -30,7 +30,7 @@ jobs:
       - name: Build
         working-directory: frontend
         env:
-          VITE_API_URL: https://uniconnect-backend.onrender.com/api
+          VITE_API_URL: https://gsu-app.onrender.com/api
         run: npm run build
 
 
