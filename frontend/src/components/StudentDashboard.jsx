@@ -91,7 +91,9 @@ function EventCalendar({ events = [] }) {
   const eventsByDate = useMemo(() => {
     return events.reduce((acc, event) => {
       if (!event?.date) return acc;
-      const key = event.date;
+      const eventDate = new Date(event.date);
+      if (!eventDate || Number.isNaN(eventDate.getTime())) return acc;
+      const key = formatDateKey(eventDate);
       if (!acc[key]) acc[key] = [];
       acc[key].push(event);
       return acc;
@@ -658,15 +660,8 @@ export default function StudentDashboard({
           </div>
         </div>
       ) : (
-        <>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: 16,
-              marginBottom: 16,
-            }}
-          >
+        <div className="dashboard-layout">
+          <div className="left-stack">
             <div className="card calendar-card">
               <div className="section-title">Katıldığım Etkinlik Takvimi</div>
               <p className="helper-text" style={{ margin: "4px 0 12px" }}>
@@ -717,284 +712,288 @@ export default function StudentDashboard({
               )}
             </div>
           </div>
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <div>
-                <div className="section-title">Önerilen Etkinlikler</div>
-                <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
-                  İlgi alanlarınıza uygun olarak listelenmiş bazı öne çıkan etkinlikler.
+          <div className="right-stack">
+            <div className="card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                <div>
+                  <div className="section-title">Önerilen Etkinlikler</div>
+                  <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
+                    İlgi alanlarınıza uygun olarak listelenmiş bazı öne çıkan etkinlikler.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <span style={{ fontSize: 12 }}>Kategori:</span>
+                  <select value={recCategory} onChange={(e) => setRecCategory(e.target.value)}>
+                    {recCategories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: 12 }}>Üniversite:</span>
+                  <select value={recUniversity} onChange={(e) => setRecUniversity(e.target.value)}>
+                    {recUniversities.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: 12 }}>Şehir:</span>
+                  <select value={recCity} onChange={(e) => setRecCity(e.target.value)}>
+                    {recCities.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {loading ? (
+                <p>Etkinlikler yükleniyor...</p>
+              ) : recommended.length === 0 ? (
+                <p className="empty">
+                  {recommendationNotice ||
+                    "İlgi alanı veya geçmiş katıldığın etkinlikler üzerinden öneri alınamıyor."}
                 </p>
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: 12 }}>Kategori:</span>
-                <select value={recCategory} onChange={(e) => setRecCategory(e.target.value)}>
-                  {recCategories.map((category) => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-                
-                <span style={{ fontSize: 12 }}>Üniversite:</span>
-                <select value={recUniversity} onChange={(e) => setRecUniversity(e.target.value)}>
-                  {recUniversities.map((u) => (
-                    <option key={u} value={u}>{u}</option>
-                  ))}
-                </select>
-                <span style={{ fontSize: 12 }}>Şehir:</span>
-                <select value={recCity} onChange={(e) => setRecCity(e.target.value)}>
-                  {recCities.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
+              ) : (
+                <div className="grid cols-3">
+                  {recommended.map((event) => {
+                    const tags = getEventTags(event);
+                    return (
+                      <div key={event.id} className="event-card">
+                        <div className="favorite-heart">
+                          <button
+                            className="icon-btn"
+                            title="Favorilere ekle/çıkar"
+                            onClick={() => onToggleFavorite(event.id)}
+                          >
+                            {favorites.includes(event.id) ? "❤️" : "🤍"}
+                          </button>
+                        </div>
+                        <div>
+                          <h3>{event.title}</h3>
+                          <div className="event-meta">
+                            {(event.university || event.club?.university) ?? "-"} ·{" "}
+                            {(event.city || event.club?.city) ?? "-"}
+                          </div>
+                          <div className="event-meta">
+                            {getClubName(event)} · {event.date} · {event.category}
+                          </div>
+                          <div className="tag-selected">
+                            {tags.map((tag) => (
+                              <span key={`${event.id}-${tag}`} className="tag-chip">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="event-footer">
+                          <button
+                            className="btn small secondary"
+                            onClick={() => setMapEvent(event)}
+                          >
+                            Haritada gör
+                          </button>
+                          <button
+                            className="btn small secondary"
+                            onClick={() => setDetailEvent(event)}
+                          >
+                            Detay
+                          </button>
+                          <button
+                            className="btn small"
+                            onClick={() => handleJoinClick(event)}
+                          >
+                            Katılım isteği gönder
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            {loading ? (
-              <p>Etkinlikler yükleniyor...</p>
-            ) : recommended.length === 0 ? (
-              <p className="empty">
-                {recommendationNotice ||
-                  "İlgi alanı veya geçmiş katıldığın etkinlikler üzerinden öneri alınamıyor."}
-              </p>
-            ) : (
-              <div className="grid cols-3">
-                {recommended.map((event) => {
-                  const tags = getEventTags(event);
-                  return (
-                    <div key={event.id} className="event-card">
-                      <div className="favorite-heart">
-                        <button
-                          className="icon-btn"
-                          title="Favorilere ekle/çıkar"
-                          onClick={() => onToggleFavorite(event.id)}
-                        >
-                          {favorites.includes(event.id) ? "❤️" : "🤍"}
-                        </button>
-                      </div>
-                      <div>
-                        <h3>{event.title}</h3>
-                        <div className="event-meta">
-                          {(event.university || event.club?.university) ?? "-"} ·{" "}
-                          {(event.city || event.club?.city) ?? "-"}
-                        </div>
-                        <div className="event-meta">
-                          {getClubName(event)} · {event.date} · {event.category}
-                        </div>
-                        <div className="tag-selected">
-                          {tags.map((tag) => (
-                            <span key={`${event.id}-${tag}`} className="tag-chip">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="event-footer">
-                        <button
-                          className="btn small secondary"
-                          onClick={() => setMapEvent(event)}
-                        >
-                          Haritada gör
-                        </button>
-                        <button
-                          className="btn small secondary"
-                          onClick={() => setDetailEvent(event)}
-                        >
-                          Detay
-                        </button>
-                        <button
-                          className="btn small"
-                          onClick={() => handleJoinClick(event)}
-                        >
-                          Katılım isteği gönder
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+            <div className="card">
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 8,
+                  gap: 12,
+                }}
+              >
+                <div className="section-title">Tüm Etkinlikler</div>
+                <div className="filter-row">
+                  <span style={{ fontSize: 12 }}>Kategori:</span>
+                  <select
+                    value={selectedCategory}
+                    onChange={(event) => setSelectedCategory(event.target.value)}
+                  >
+                    {categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: 12 }}>Üniversite:</span>
+                  <select
+                    value={selectedUniversity}
+                    onChange={(event) =>
+                      setSelectedUniversity(event.target.value)
+                    }
+                  >
+                    {universities.map((university) => (
+                      <option key={university} value={university}>
+                        {university}
+                      </option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: 12 }}>Şehir:</span>
+                  <select
+                    value={selectedCity}
+                    onChange={(event) => setSelectedCity(event.target.value)}
+                  >
+                    {cities.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            )}
-          </div>
 
-          <div className="card">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 8,
-                gap: 12,
-              }}
-            >
-              <div className="section-title">Tüm Etkinlikler</div>
-              <div className="filter-row">
-                <span style={{ fontSize: 12 }}>Kategori:</span>
-                <select
-                  value={selectedCategory}
-                  onChange={(event) => setSelectedCategory(event.target.value)}
-                >
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-                <span style={{ fontSize: 12 }}>Üniversite:</span>
-                <select
-                  value={selectedUniversity}
-                  onChange={(event) =>
-                    setSelectedUniversity(event.target.value)
-                  }
-                >
-                  {universities.map((university) => (
-                    <option key={university} value={university}>
-                      {university}
-                    </option>
-                  ))}
-                </select>
-                <span style={{ fontSize: 12 }}>Şehir:</span>
-                <select
-                  value={selectedCity}
-                  onChange={(event) => setSelectedCity(event.target.value)}
-                >
-                  {cities.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-                
-              </div>
+              {loading ? (
+                <p>Etkinlikler yükleniyor...</p>
+              ) : filteredEvents.length === 0 ? (
+                <p className="empty">
+                  Seçilen filtrelere uygun etkinlik bulunamadı.
+                </p>
+              ) : (
+                <div className="grid cols-3">
+                  {filteredEvents.map((event) => {
+                    const tags = getEventTags(event);
+                    return (
+                      <div key={event.id} className="event-card">
+                        <div className="favorite-heart">
+                          <button
+                            className="icon-btn"
+                            title="Favorilere ekle/çıkar"
+                            onClick={() => onToggleFavorite(event.id)}
+                          >
+                            {favorites.includes(event.id) ? "❤️" : "🤍"}
+                          </button>
+                        </div>
+                        <div>
+                          <h3>{event.title}</h3>
+                          <div className="event-meta">
+                            {(event.university || event.club?.university) ?? "-"} ·{" "}
+                            {(event.city || event.club?.city) ?? "-"}
+                          </div>
+                          <div className="event-meta">
+                            {getClubName(event)} · {event.date} · {event.category}
+                          </div>
+                          <div className="tag-selected">
+                            {tags.map((tag) => (
+                              <span key={`${event.id}-${tag}`} className="tag-chip">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="event-footer">
+                          <button
+                            className="btn small secondary"
+                            onClick={() => setMapEvent(event)}
+                          >
+                            Haritada gör
+                          </button>
+                          <button
+                            className="btn small secondary"
+                            onClick={() => setDetailEvent(event)}
+                          >
+                            Detay
+                          </button>
+                          <button
+                            className="btn small"
+                            onClick={() => handleJoinClick(event)}
+                          >
+                            Katılım isteği gönder
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-
-            {loading ? (
-              <p>Etkinlikler yükleniyor...</p>
-            ) : filteredEvents.length === 0 ? (
-              <p className="empty">
-                Seçilen filtrelere uygun etkinlik bulunamadı.
-              </p>
-            ) : (
-              <div className="grid cols-3">
-                {filteredEvents.map((event) => {
-                  const tags = getEventTags(event);
-                  return (
-                    <div key={event.id} className="event-card">
-                      <div className="favorite-heart">
-                        <button
-                          className="icon-btn"
-                          title="Favorilere ekle/çıkar"
-                          onClick={() => onToggleFavorite(event.id)}
-                        >
-                          {favorites.includes(event.id) ? "❤️" : "🤍"}
-                        </button>
-                      </div>
-                      <div>
-                        <h3>{event.title}</h3>
-                        <div className="event-meta">
-                          {(event.university || event.club?.university) ?? "-"} ·{" "}
-                          {(event.city || event.club?.city) ?? "-"}
+            <div className="card">
+              <div className="section-title">Favori Etkinliklerim</div>
+              {favoriteEvents.length === 0 ? (
+                <p className="empty">
+                  Henüz favorilere eklediğiniz bir etkinlik yok. Kalp ikonuna
+                  tıklayarak favori ekleyebilirsiniz.
+                </p>
+              ) : (
+                <div className="grid cols-3">
+                  {favoriteEvents.map((event) => {
+                    const tags = getEventTags(event);
+                    return (
+                      <div key={event.id} className="event-card">
+                        <div className="favorite-heart">
+                          <button
+                            className="icon-btn"
+                            title="Favorilerden çıkar"
+                            onClick={() => onToggleFavorite(event.id)}
+                          >
+                            ❤️
+                          </button>
                         </div>
-                        <div className="event-meta">
-                          {getClubName(event)} · {event.date} · {event.category}
+                        <div>
+                          <h3>{event.title}</h3>
+                          <div className="event-meta">
+                            {(event.university || event.club?.university) ?? "-"} ·{" "}
+                            {(event.city || event.club?.city) ?? "-"}
+                          </div>
+                          <div className="event-meta">
+                            {getClubName(event)} · {event.date} · {event.category}
+                          </div>
+                          <div className="tag-selected">
+                            {tags.map((tag) => (
+                              <span key={`${event.id}-${tag}`} className="tag-chip">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                        <div className="tag-selected">
-                          {tags.map((tag) => (
-                            <span key={`${event.id}-${tag}`} className="tag-chip">
-                              {tag}
-                            </span>
-                          ))}
+                        <div className="event-footer">
+                          <button
+                            className="btn small secondary"
+                            onClick={() => setMapEvent(event)}
+                          >
+                            Haritada gör
+                          </button>
+                          <button
+                            className="btn small secondary"
+                            onClick={() => setDetailEvent(event)}
+                          >
+                            Detay
+                          </button>
+                          <button
+                            className="btn small"
+                            onClick={() => handleJoinClick(event)}
+                          >
+                            Katılım isteği gönder
+                          </button>
                         </div>
                       </div>
-                      <div className="event-footer">
-                        <button
-                          className="btn small secondary"
-                          onClick={() => setMapEvent(event)}
-                        >
-                          Haritada gör
-                        </button>
-                        <button
-                          className="btn small secondary"
-                          onClick={() => setDetailEvent(event)}
-                        >
-                          Detay
-                        </button>
-                        <button
-                          className="btn small"
-                          onClick={() => handleJoinClick(event)}
-                        >
-                          Katılım isteği gönder
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-
-          <div className="card">
-            <div className="section-title">Favori Etkinliklerim</div>
-            {favoriteEvents.length === 0 ? (
-              <p className="empty">
-                Henüz favorilere eklediğiniz bir etkinlik yok. Kalp ikonuna
-                tıklayarak favori ekleyebilirsiniz.
-              </p>
-            ) : (
-              <div className="grid cols-3">
-                {favoriteEvents.map((event) => {
-                  const tags = getEventTags(event);
-                  return (
-                    <div key={event.id} className="event-card">
-                      <div className="favorite-heart">
-                        <button
-                          className="icon-btn"
-                          title="Favorilerden çıkar"
-                          onClick={() => onToggleFavorite(event.id)}
-                        >
-                          ❤️
-                        </button>
-                      </div>
-                      <div>
-                        <h3>{event.title}</h3>
-                        <div className="event-meta">
-                          {(event.university || event.club?.university) ?? "-"} ·{" "}
-                          {(event.city || event.club?.city) ?? "-"}
-                        </div>
-                        <div className="event-meta">
-                          {getClubName(event)} · {event.date} · {event.category}
-                        </div>
-                        <div className="tag-selected">
-                          {tags.map((tag) => (
-                            <span key={`${event.id}-${tag}`} className="tag-chip">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="event-footer">
-                        <button
-                          className="btn small secondary"
-                          onClick={() => setMapEvent(event)}
-                        >
-                          Haritada gör
-                        </button>
-                        <button
-                          className="btn small secondary"
-                          onClick={() => setDetailEvent(event)}
-                        >
-                          Detay
-                        </button>
-                        <button
-                          className="btn small"
-                          onClick={() => handleJoinClick(event)}
-                        >
-                          Katılım isteği gönder
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </>
+        </div>
       )}
 
       {detailEvent && (

@@ -390,6 +390,24 @@ textarea {
   gap: 16px;
 }
 
+.dashboard-layout {
+  display: grid;
+  gap: 18px;
+}
+
+.left-stack,
+.right-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 992px) {
+  .dashboard-layout {
+    grid-template-columns: minmax(280px, 320px) 1fr;
+  }
+}
+
 @media (min-width: 768px) {
   .grid.cols-2 {
     grid-template-columns: 2fr 1fr;
