@@ -15,6 +15,7 @@ venv/
 .venv/
 backend/.venv/
 backend/.venv*/
+frontend/.venv*/
 
 # Frontend
 node_modules/
