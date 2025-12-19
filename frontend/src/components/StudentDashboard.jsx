@@ -300,10 +300,6 @@ export default function StudentDashboard({
     };
   }, [tagInput]);
 
-  useEffect(() => {
-    loadParticipations();
-  }, [loadParticipations]);
-
   const [activeTab, setActiveTab] = useState("events");
   const [selectedCategory, setSelectedCategory] = useState("Hepsi");
   const [selectedUniversity, setSelectedUniversity] = useState("Hepsi");
@@ -334,6 +330,10 @@ export default function StudentDashboard({
       setParticipationError("Katıldığınız etkinlikler görünmüyor.");
     }
   }, [student?.id]);
+
+  useEffect(() => {
+    loadParticipations();
+  }, [loadParticipations]);
 
   const categories = useMemo(() => {
     const list = Array.from(new Set(events.map((event) => event.category)));
