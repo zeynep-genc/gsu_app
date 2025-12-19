@@ -614,13 +614,21 @@ export default function StudentDashboard({
                           {(event.city || event.club?.city) ?? "-"}
                         </p>
                       </div>
-                      <span
-                        className={`status-pill status-${entry.status}`}
-                        role="status"
-                      >
-                        {getParticipationStatusLabel(entry.status)}
-                        {waitingLabel}
-                      </span>
+                      <div className="participation-actions">
+                        <button
+                          className="btn small secondary"
+                          onClick={() => setDetailEvent(event)}
+                        >
+                          Detay
+                        </button>
+                        <span
+                          className={`status-pill status-${entry.status}`}
+                          role="status"
+                        >
+                          {getParticipationStatusLabel(entry.status)}
+                          {waitingLabel}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}

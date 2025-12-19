@@ -406,6 +406,13 @@ textarea {
   padding-bottom: 0;
 }
 
+.participation-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
 .status-pill {
   display: inline-flex;
   align-items: center;
