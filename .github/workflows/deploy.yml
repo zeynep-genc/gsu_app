@@ -29,7 +29,10 @@ jobs:
 
       - name: Build
         working-directory: frontend
+        env:
+          VITE_API_URL: https://uniconnect-backend.onrender.com
         run: npm run build
+
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
