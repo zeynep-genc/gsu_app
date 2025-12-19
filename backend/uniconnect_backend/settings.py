@@ -11,7 +11,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "insecure-dev-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
-raw_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
+raw_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "gsu-app.onrender.com,localhost,127.0.0.1")
 ALLOWED_HOSTS = [host.strip() for host in raw_hosts.split(",") if host.strip()]
 
 INSTALLED_APPS = [
@@ -104,7 +104,7 @@ REST_FRAMEWORK = {
 }
 
 cors_origins_raw = os.environ.get(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+    "CORS_ALLOWED_ORIGINS", "https://zeynep-genc.github.io,http://localhost:5173,http://127.0.0.1:5173"
 )
 CORS_ALLOWED_ORIGINS = [
     origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()
@@ -114,7 +114,7 @@ if not CORS_ALLOWED_ORIGINS and DEBUG:
 else:
     CORS_ALLOW_ALL_ORIGINS = False
 
-csrf_origins_raw = os.environ.get("CSRF_TRUSTED_ORIGINS", "")
+csrf_origins_raw = os.environ.get("CSRF_TRUSTED_ORIGINS", "https://zeynep-genc.github.io,https://gsu-app.onrender.com")
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in csrf_origins_raw.split(",") if origin.strip()
 ]
