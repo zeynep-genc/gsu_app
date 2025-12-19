@@ -55,6 +55,7 @@ export default function ClubDashboard({
     date: "",
     category: "",
     address: "",
+    description: "",
     city: club?.city || FALLBACK_CLUB.city,
     capacity: 50,
   }));
@@ -65,6 +66,13 @@ export default function ClubDashboard({
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
   const [statsEvent, setStatsEvent] = useState(null);
+  const [mapPreviewUrl, setMapPreviewUrl] = useState(DEFAULT_MAP_URL);
+  const [isMapPreviewOpen, setIsMapPreviewOpen] = useState(false);
+  const [autoMapPreviewEnabled, setAutoMapPreviewEnabled] = useState(true);
+  const mapPreviewTimer = useRef(null);
+  const [dismissedCategories, setDismissedCategories] = useState([]);
+  const [mailStatus, setMailStatus] = useState("");
+  const [isSendingMail, setIsSendingMail] = useState(false);
   const [profileMessage, setProfileMessage] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState(false);
@@ -78,6 +86,12 @@ export default function ClubDashboard({
       city: normalized.city || previous.city,
     }));
   }, [club]);
+
+  useEffect(() => {
+    if (statsEvent) {
+      setMailStatus("");
+    }
+  }, [statsEvent]);
 
   const clubEvents = useMemo(() => {
     return events.filter((event) => {
@@ -98,8 +112,10 @@ export default function ClubDashboard({
         categories.add(event.category);
       }
     });
-    return Array.from(categories).slice(0, 8);
-  }, [events]);
+    return Array.from(categories)
+      .filter((category) => !dismissedCategories.includes(category))
+      .slice(0, 8);
+  }, [events, dismissedCategories]);
 
   const filteredTagSuggestions = useMemo(() => {
     return tagSuggestions.filter((suggestion) => {
@@ -120,8 +136,23 @@ export default function ClubDashboard({
     setForm((previous) => ({ ...previous, [name]: value }));
   }
 
+  function buildMapEmbedUrl(query) {
+    const safe = (query || "Galatasaray Üniversitesi").trim();
+    return `https://maps.google.com/maps?q=${encodeURIComponent(safe)}&output=embed`;
+  }
+
   function handleSelectCategory(value) {
     setForm((previous) => ({ ...previous, category: value }));
+  }
+
+  function dismissCategory(option) {
+    setDismissedCategories((previous) =>
+      previous.includes(option) ? previous : [...previous, option]
+    );
+  }
+
+  function resetCategorySuggestions() {
+    setDismissedCategories([]);
   }
 
   function addTag(name) {
@@ -234,11 +265,11 @@ export default function ClubDashboard({
     }
     const capacityNumber = Number(form.capacity) || 0;
     const hasAddress = (form.address || "").trim();
-    const mapUrl = hasAddress
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-          hasAddress
-        )}`
-      : DEFAULT_MAP_URL;
+    const fallbackAddress = (
+      `${form.city || clubProfile.city} ${form.title || clubProfile.name || ""}`.trim() ||
+      `${clubProfile.university} ${clubProfile.name}`
+    );
+    const mapUrl = buildMapEmbedUrl(hasAddress || fallbackAddress);
     try {
       const payload = {
         title,
@@ -248,6 +279,7 @@ export default function ClubDashboard({
         university: clubProfile.university,
         capacity: capacityNumber > 0 ? capacityNumber : 50,
         map_url: mapUrl,
+        description: form.description?.trim() || "",
         club_id: clubProfile.id,
         tag_names: selectedTags,
       };
@@ -259,6 +291,7 @@ export default function ClubDashboard({
         date: "",
         category: "",
         address: "",
+        description: "",
         capacity: 50,
         city: clubProfile.city,
       }));
@@ -274,17 +307,62 @@ export default function ClubDashboard({
     }
   }
 
-  function openMapPreview() {
-    const query =
-      (form.address || "").trim() ||
-      `${form.city || clubProfile.city} ${form.title || clubProfile.name || "kulüp etkinliği"}`.trim();
-    const url = query
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-          query
-        )}`
-      : DEFAULT_MAP_URL;
-    window.open(url, "event-location", "width=900,height=600");
+  async function handleSendMail(event) {
+    setMailStatus("");
+    setIsSendingMail(true);
+    try {
+      const response = await api.sendEventMail(event.id);
+      setMailStatus(response?.message || "Mail gönderildi.");
+    } catch (err) {
+      setMailStatus(err.message || "Mail gönderilemedi.");
+    } finally {
+      setIsSendingMail(false);
+    }
   }
+
+  function getPreviewQuery() {
+    return (
+      (form.address || "").trim() ||
+      `${form.city || clubProfile.city} ${form.title || clubProfile.name || ""}`.trim() ||
+      `${clubProfile.university} ${clubProfile.name}`
+    );
+  }
+
+  function openMapPreview() {
+    const query = getPreviewQuery();
+    setAutoMapPreviewEnabled(true);
+    setMapPreviewUrl(buildMapEmbedUrl(query));
+    setIsMapPreviewOpen(true);
+  }
+
+  function closeMapPreview(manual = true) {
+    setIsMapPreviewOpen(false);
+    if (manual) {
+      setAutoMapPreviewEnabled(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!autoMapPreviewEnabled) return;
+    if (mapPreviewTimer.current) {
+      clearTimeout(mapPreviewTimer.current);
+    }
+    const address = (form.address || "").trim();
+    if (!address) {
+      setIsMapPreviewOpen(false);
+      return;
+    }
+    mapPreviewTimer.current = window.setTimeout(() => {
+      setMapPreviewUrl(buildMapEmbedUrl(address));
+      setIsMapPreviewOpen(true);
+    }, 700);
+    return () => {
+      if (mapPreviewTimer.current) {
+        clearTimeout(mapPreviewTimer.current);
+        mapPreviewTimer.current = null;
+      }
+    };
+  }, [form.address, autoMapPreviewEnabled]);
 
   function handleProfileChange(event) {
     const { name, value } = event.target;
@@ -489,11 +567,29 @@ export default function ClubDashboard({
                         }`}
                         onClick={() => handleSelectCategory(option)}
                       >
-                        {option}
+                        <span>{option}</span>
+                        <span
+                          className="category-chip-close"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            dismissCategory(option);
+                          }}
+                        >
+                          ×
+                        </span>
                       </button>
                     ))
                   )}
                 </div>
+                {dismissedCategories.length > 0 && (
+                  <button
+                    type="button"
+                    className="category-reset"
+                    onClick={resetCategorySuggestions}
+                  >
+                    Önerileri sıfırla
+                  </button>
+                )}
                 <input
                   name="category"
                   value={form.category}
@@ -525,6 +621,14 @@ export default function ClubDashboard({
                     Haritada gör
                   </button>
                 </div>
+
+                <label>Etkinlik Açıklaması (opsiyonel)</label>
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  placeholder="Örn: Etkinlik programı veya diğer bilgiler..."
+                ></textarea>
 
                 <label>Kapasite (kişi)</label>
                 <input
@@ -811,9 +915,46 @@ export default function ClubDashboard({
                   Harita, etkinlik oluşturulurken eklenen harita bağlantısına
                   göre görüntülenmektedir.
                 </p>
+                {statsEvent.description && (
+                  <p className="capacity-summary">
+                    Açıklama: <strong>{statsEvent.description}</strong>
+                  </p>
+                )}
+                <div
+                  style={{
+                    marginTop: 14,
+                    display: "flex",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                  }}
+                >
+                  <button
+                    className="btn small"
+                    onClick={() => handleSendMail(statsEvent)}
+                    disabled={isSendingMail}
+                  >
+                    {isSendingMail ? "Gönderiliyor..." : "Katılımcılara Mail Gönder"}
+                  </button>
+                  {mailStatus && (
+                    <span className="helper-text" style={{ marginTop: 4 }}>
+                      {mailStatus}
+                    </span>
+                  )}
+                </div>
               </>
             );
           })()}
+        </Modal>
+      )}
+      {isMapPreviewOpen && (
+        <Modal title="Harita Önizlemesi" onClose={() => closeMapPreview(true)}>
+          <iframe
+            title="Etkinlik Lokasyonu"
+            src={mapPreviewUrl}
+            loading="lazy"
+            style={{ width: "100%", height: "360px", border: "0" }}
+          ></iframe>
         </Modal>
       )}
     </main>

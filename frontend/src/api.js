@@ -96,6 +96,13 @@ export async function joinEvent(eventId, payload) {
   });
 }
 
+export async function sendEventMail(eventId, payload = {}) {
+  return request(`/events/${encodeURIComponent(eventId)}/notify/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 
 
 export async function studentLogin(payload) {
@@ -186,4 +193,8 @@ export async function updateStudent(studentId, payload) {
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+export async function getParticipations(studentId) {
+  return request(`/students/${encodeURIComponent(studentId)}/participations/`);
 }

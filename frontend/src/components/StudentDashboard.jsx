@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { DEFAULT_MAP_URL, CLASS_LEVEL_OPTIONS } from "../constants.js";
 import Modal from "./Modal.jsx";
 import * as api from "../api.js";
@@ -46,9 +46,102 @@ function getMapUrl(event) {
 
 function getGradeLabel(value) {
   const v = value === undefined || value === null ? null : Number(value);
+  if (v === null || Number.isNaN(v)) {
+    return "Seçiniz";
+  }
   const opt = CLASS_LEVEL_OPTIONS.find((o) => Number(o.value) === v);
   if (opt) return opt.label;
-  return v ? `${v}. sınıf` : "-";
+  return `${v}. sınıf`;
+}
+
+const WEEKDAYS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+
+function formatDateKey(date) {
+  if (!date) return null;
+  return date.toISOString().split("T")[0];
+}
+
+function buildCalendarCells(baseDate) {
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const offset = (firstDay.getDay() + 6) % 7;
+  const cells = [];
+  for (let i = 0; i < offset; i++) {
+    cells.push(null);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    cells.push({
+      day,
+      date,
+      key: formatDateKey(date),
+    });
+  }
+  while (cells.length % 7 !== 0) {
+    cells.push(null);
+  }
+  return cells;
+}
+
+function EventCalendar({ events = [] }) {
+  const calendarMonth = useMemo(() => new Date(), []);
+  const cells = useMemo(() => buildCalendarCells(calendarMonth), [calendarMonth]);
+  const eventsByDate = useMemo(() => {
+    return events.reduce((acc, event) => {
+      if (!event?.date) return acc;
+      const key = event.date;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(event);
+      return acc;
+    }, {});
+  }, [events]);
+  const todayKey = formatDateKey(new Date());
+  return (
+    <>
+      <div className="calendar-legend">
+        {WEEKDAYS.map((day) => (
+          <div key={day} className="calendar-legend-cell">
+            {day}
+          </div>
+        ))}
+      </div>
+      <div className="calendar-grid">
+        {cells.map((cell, index) => {
+          if (!cell) {
+            return <div key={`empty-${index}`} className="calendar-cell empty"></div>;
+          }
+          const cellEvents = eventsByDate[cell.key] || [];
+          const isToday = cell.key === todayKey;
+          return (
+            <div
+              key={cell.key}
+              className={`calendar-cell ${cellEvents.length ? "has-event" : ""} ${
+                isToday ? "today" : ""
+              }`}
+            >
+              <span className="calendar-day-number">{cell.day}</span>
+              {cellEvents.length > 0 && (
+                <div className="calendar-event-indicator">
+                  {cellEvents.slice(0, 2).map((event) => (
+                    <span key={`${event.id}-${event.title}`} className="calendar-event-dot">
+                      {event.title}
+                    </span>
+                  ))}
+                  {cellEvents.length > 2 && (
+                    <span className="calendar-event-more">
+                      +{cellEvents.length - 2} daha
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
 }
 
 export default function StudentDashboard({
@@ -60,6 +153,7 @@ export default function StudentDashboard({
   student,
   onUpdateStudent,
   recommendations = [],
+  recommendationNotice = "",
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({});
@@ -205,6 +299,11 @@ export default function StudentDashboard({
       if (suggestionTimer) clearTimeout(suggestionTimer);
     };
   }, [tagInput]);
+
+  useEffect(() => {
+    loadParticipations();
+  }, [loadParticipations]);
+
   const [activeTab, setActiveTab] = useState("events");
   const [selectedCategory, setSelectedCategory] = useState("Hepsi");
   const [selectedUniversity, setSelectedUniversity] = useState("Hepsi");
@@ -217,6 +316,24 @@ export default function StudentDashboard({
   const [clubDetailsEvent, setClubDetailsEvent] = useState(null);
   const [joinResult, setJoinResult] = useState(null);
   const [mapEvent, setMapEvent] = useState(null);
+  const [participations, setParticipations] = useState([]);
+  const [participationError, setParticipationError] = useState("");
+  const loadParticipations = useCallback(async () => {
+    if (!student?.id) {
+      setParticipations([]);
+      setParticipationError("");
+      return;
+    }
+    try {
+      const response = await api.getParticipations(student.id);
+      setParticipations(response?.participations || []);
+      setParticipationError("");
+    } catch (err) {
+      console.warn("Katılımlar alınamadı.", err);
+      setParticipations([]);
+      setParticipationError("Katıldığınız etkinlikler görünmüyor.");
+    }
+  }, [student?.id]);
 
   const categories = useMemo(() => {
     const list = Array.from(new Set(events.map((event) => event.category)));
@@ -284,6 +401,25 @@ export default function StudentDashboard({
     return ["Hepsi", ...list];
   }, [recommendations]);
 
+  const participatedEvents = useMemo(() => {
+    const normalized = participations
+      .map((participation) => participation.event)
+      .filter(Boolean);
+    const toTimestamp = (event) => {
+      const time = new Date(event?.date).getTime();
+      return Number.isFinite(time) ? time : 0;
+    };
+    return normalized.sort((a, b) => toTimestamp(b) - toTimestamp(a));
+  }, [participations]);
+
+  const pastParticipatedEvents = useMemo(() => {
+    const now = Date.now();
+    return participatedEvents.filter((event) => {
+      const time = new Date(event?.date).getTime();
+      return Number.isFinite(time) && time <= now;
+    });
+  }, [participatedEvents]);
+
   useEffect(()=>{
     console.debug('Filters:', {selectedCategory, selectedUniversity, selectedCity, filteredRecommendationsCount: filteredRecommendations.length});
   }, [selectedCategory, selectedUniversity, selectedCity, filteredRecommendations.length]);
@@ -301,6 +437,7 @@ export default function StudentDashboard({
           response.message ||
           "Katılım isteğiniz alındı. Kulüp temsilcisi tarafından bilgilendirileceksiniz.",
       });
+      await loadParticipations();
     } catch (error) {
       setJoinResult({
         title: "Katılım isteği gönderilemedi",
@@ -310,6 +447,7 @@ export default function StudentDashboard({
   }
 
   const studentInfo = student || {};
+  const gradeLabel = getGradeLabel(studentInfo.grade);
 
   return (
     <main>
@@ -329,8 +467,8 @@ export default function StudentDashboard({
             <div style={{ fontSize: 12, color: "#6b7280" }}>
               {(studentInfo.university || "Üniversite")} ·{" "}
               {(studentInfo.department || "Bölüm")} ·{" "}
-              {studentInfo.grade || "-"}
-              . sınıf
+              {gradeLabel}
+              {!["Seçiniz", "Hazırlık"].includes(gradeLabel) && ". sınıf"}
             </div>
           </div>
           <div className="tab-buttons">
@@ -521,6 +659,64 @@ export default function StudentDashboard({
         </div>
       ) : (
         <>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 16,
+              marginBottom: 16,
+            }}
+          >
+            <div className="card calendar-card">
+              <div className="section-title">Katıldığım Etkinlik Takvimi</div>
+              <p className="helper-text" style={{ margin: "4px 0 12px" }}>
+                Kayıtlı olduğunuz etkinlikler bu takvimde işaretlenir.
+              </p>
+              <EventCalendar events={participatedEvents} />
+              {participationError && (
+                <p className="helper-text" style={{ color: "#dc2626", marginTop: 8 }}>
+                  {participationError}
+                </p>
+              )}
+            </div>
+            <div className="card past-events-card">
+              <div className="section-title">Geçmiş Katıldığım Etkinlikler</div>
+              {pastParticipatedEvents.length === 0 ? (
+                <p className="empty">Henüz katıldığınız etkinlik yok.</p>
+              ) : (
+                <div className="past-events-list">
+                  {pastParticipatedEvents.slice(0, 6).map((event) => (
+                    <div key={event.id} className="past-event-item">
+                      <div>
+                        <strong>{event.title}</strong>
+                        <p className="event-meta" style={{ margin: "4px 0 2px" }}>
+                          {event.date} · {event.category}
+                        </p>
+                        <p className="event-meta" style={{ margin: 0 }}>
+                          {(event.university || event.club?.university) ?? "-"} ·{" "}
+                          {(event.city || event.club?.city) ?? "-"}
+                        </p>
+                      </div>
+                      {getEventTags(event).length > 0 && (
+                        <div className="tag-selected" style={{ marginTop: 6 }}>
+                          {getEventTags(event).map((tag) => (
+                            <span key={`${event.id}-${tag}`} className="tag-chip">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {pastParticipatedEvents.length > 6 && (
+                    <p className="helper-text">
+                      +{pastParticipatedEvents.length - 6} diğer etkinlik
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
               <div>
@@ -553,6 +749,11 @@ export default function StudentDashboard({
             </div>
             {loading ? (
               <p>Etkinlikler yükleniyor...</p>
+            ) : recommended.length === 0 ? (
+              <p className="empty">
+                {recommendationNotice ||
+                  "İlgi alanı veya geçmiş katıldığın etkinlikler üzerinden öneri alınamıyor."}
+              </p>
             ) : (
               <div className="grid cols-3">
                 {recommended.map((event) => {

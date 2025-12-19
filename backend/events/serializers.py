@@ -44,6 +44,7 @@ class EventSerializer(serializers.ModelSerializer):
             "id",
             "title",
             "category",
+            "description",
             "city",
             "university",
             "date",
@@ -226,6 +227,12 @@ class ClubRegistrationSerializer(serializers.ModelSerializer):
             "email",
             "password",
         )
+
+    def validate_email(self, value):
+        cleaned = (value or "").strip().lower()
+        if not cleaned.endswith(".edu.tr"):
+            raise serializers.ValidationError("E-posta edu.tr uzantılı olmalıdır.")
+        return cleaned
 
     def create(self, validated_data):
         password = validated_data.pop("password")

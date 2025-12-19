@@ -194,12 +194,49 @@ textarea {
   background: #eef2ff;
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease;
+  position: relative;
+  padding-right: 26px;
 }
 
 .category-chip.active {
   background: #c7d2fe;
   border-color: #a5b4fc;
   box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
+}
+
+.category-chip-close {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  color: #0f172a;
+}
+
+.category-chip-close:hover {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.category-reset {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.category-reset:hover {
+  color: #1d4ed8;
 }
 
 .tag-input-wrapper {
@@ -258,6 +295,94 @@ textarea {
   gap: 10px;
   margin: 12px 0;
   flex-wrap: wrap;
+}
+
+.calendar-legend {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  text-align: center;
+  font-size: 12px;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.calendar-legend-cell {
+  padding: 4px 0;
+  font-weight: 600;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.calendar-cell {
+  border-radius: 10px;
+  border: 1px solid #e0e7ff;
+  min-height: 68px;
+  padding: 6px;
+  background: #f8fafc;
+  position: relative;
+}
+
+.calendar-cell.empty {
+  border: none;
+  background: transparent;
+}
+
+.calendar-cell.today {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.calendar-cell.has-event .calendar-day-number {
+  font-weight: 700;
+}
+
+.calendar-day-number {
+  font-size: 14px;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.calendar-event-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-event-dot {
+  background: #e0f2fe;
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: #1d4ed8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-event-more {
+  font-size: 10px;
+  color: #475569;
+}
+
+.past-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.past-event-item {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.past-event-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .grid {

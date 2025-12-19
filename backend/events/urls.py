@@ -10,10 +10,11 @@ from .views import (
     EventViewSet,
     FavoriteView,
     StudentLoginView,
+    StudentParticipationsView,
     StudentRegisterView,
-    RecommendationView,  
-    MetaTagsView,        
-    StudentProfileView,  
+    RecommendationView,
+    MetaTagsView,
+    StudentProfileView,
 )
 
 router = DefaultRouter()
@@ -29,6 +30,7 @@ urlpatterns = [
 
     path("meta/tags/", MetaTagsView.as_view(), name="meta-tags"),
     path("students/<int:pk>/", StudentProfileView.as_view(), name="student-profile"),
+    path("students/<int:pk>/participations/", StudentParticipationsView.as_view(), name="student-participations"),
     path("clubs/<int:pk>/", ClubProfileView.as_view(), name="club-profile"),
 
     path("recommendations/", RecommendationView.as_view(), name="recommendations"),  # ✅ ekle

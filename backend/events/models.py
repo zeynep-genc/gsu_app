@@ -66,6 +66,7 @@ class Event(TimeStampedModel):
     club = models.ForeignKey(Club, related_name="events", on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     category = models.CharField(max_length=120)
+    description = models.TextField(blank=True, default="")
     city = models.CharField(max_length=120)
     university = models.CharField(max_length=255)
     date = models.DateField()

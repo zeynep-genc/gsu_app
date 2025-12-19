@@ -16,6 +16,7 @@ from .serializers import (
     ClubUpdateSerializer,
     EventSerializer,
     FavoriteSerializer,
+    ParticipationSerializer,
     StudentRegistrationSerializer,
     StudentSerializer,
     StudentUpdateSerializer,
@@ -65,6 +66,27 @@ class EventViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(event)
         return Response(
             {"event": serializer.data, "message": message, "status": participation.status}
+        )
+
+    @action(detail=True, methods=["post"], url_path="notify")
+    def notify_participants(self, request, pk=None):
+        event = self.get_object()
+        participants = Participation.objects.filter(event=event, status=Participation.STATUS_CONFIRMED)
+        participant_emails = participants.values_list("student__email", flat=True).distinct()
+        count = len(participant_emails)
+        subject = request.data.get("subject") or f"{event.title} hakkında bilgilendirme"
+        # Actual mailing would happen here; for now we just log the intent.
+        logger.info(
+            "Kulüp e-postası: etkinlik %s için '%s' başlıklı mesaj %d kişiye gönderildi.",
+            event.id,
+            subject,
+            count,
+        )
+        return Response(
+            {
+                "message": f"{count} kişiye mail gönderildi.",
+                "recipient_count": count,
+            }
         )
 
 
@@ -209,30 +231,29 @@ class RecommendationView(APIView):
         from django.utils import timezone
 
         interest_ids = list(student.interests.values_list("id", flat=True))
+        past_tag_ids = list(
+            Tag.objects.filter(events__participations__student=student)
+            .values_list("id", flat=True)
+        )
+
+        tag_ids = list({*interest_ids, *past_tag_ids})
+        if not tag_ids:
+            return Response(
+                {
+                    "recommendations": [],
+                    "message": "İlgi alanı veya geçmiş katıldığınız etkinliklerden öneriye veri bulunamadı.",
+                }
+            )
 
         today = timezone.localdate()
-
-        if interest_ids:
-            events = (
-                Event.objects.annotate(
-                    score=Count("tags", filter=Q(tags__in=interest_ids))
-                )
-                .filter(score__gt=0)
-                .annotate(popularity=F("participants_count"))
-                .order_by("-score", "-popularity", "date")[:50]
+        events = (
+            Event.objects.annotate(
+                score=Count("tags", filter=Q(tags__in=tag_ids))
             )
-        else:
-            events = (
-                Event.objects.filter(date__gte=today, university__iexact=student.university)
-                .annotate(popularity=F("participants_count"))
-                .order_by("-popularity", "date")[:50]
-            )
-            if not events.exists():
-                events = (
-                    Event.objects.filter(date__gte=today)
-                    .annotate(popularity=F("participants_count"))
-                    .order_by("-popularity", "date")[:50]
-                )
+            .filter(score__gt=0, date__gte=today)
+            .annotate(popularity=F("participants_count"))
+            .order_by("-score", "-popularity", "date")[:50]
+        )
 
         serializer = EventSerializer(events, many=True)
         return Response({"recommendations": serializer.data})
@@ -269,6 +290,20 @@ class StudentProfileView(APIView):
         serializer.is_valid(raise_exception=True)
         student = serializer.save()
         return Response({"message": "Profil güncellendi.", "student": StudentSerializer(student).data})
+
+
+class StudentParticipationsView(APIView):
+    """List participations (events) for a student."""
+
+    def get(self, request, pk=None):
+        student = get_object_or_404(Student, pk=pk)
+        participations = (
+            Participation.objects.filter(student=student)
+            .select_related("event", "event__club")
+            .order_by("-created_at")
+        )
+        serializer = ParticipationSerializer(participations, many=True)
+        return Response({"participations": serializer.data})
 
 
 class ClubProfileView(APIView):

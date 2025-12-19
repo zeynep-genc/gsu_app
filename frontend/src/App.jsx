@@ -35,6 +35,7 @@ export default function App() {
   const [events, setEvents] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
+  const [recommendationNotice, setRecommendationNotice] = useState("");
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [globalError, setGlobalError] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -60,14 +61,17 @@ export default function App() {
     async function loadRecs() {
       if (!student?.id) {
         setRecommendations([]);
+        setRecommendationNotice("");
         return;
       }
       try {
         const res = await api.getRecommendations(student.id);
         setRecommendations(res?.recommendations || []);
+        setRecommendationNotice(res?.message || "");
       } catch (e) {
         console.warn("Failed to load recommendations", e);
         setRecommendations([]);
+        setRecommendationNotice("");
       }
     }
     loadRecs();
@@ -269,6 +273,7 @@ export default function App() {
           loading={loadingEvents}
           student={studentData}
           recommendations={recommendations}
+          recommendationNotice={recommendationNotice}
           onUpdateStudent={setStudent}
         />
       )}
