@@ -54,96 +54,13 @@ function getGradeLabel(value) {
   return `${v}. sınıf`;
 }
 
-const WEEKDAYS = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+const PARTICIPATION_STATUS_LABELS = {
+  confirmed: "Onaylandı",
+  waitlisted: "Beklemede",
+};
 
-function formatDateKey(date) {
-  if (!date) return null;
-  return date.toISOString().split("T")[0];
-}
-
-function buildCalendarCells(baseDate) {
-  const year = baseDate.getFullYear();
-  const month = baseDate.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const offset = (firstDay.getDay() + 6) % 7;
-  const cells = [];
-  for (let i = 0; i < offset; i++) {
-    cells.push(null);
-  }
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, month, day);
-    cells.push({
-      day,
-      date,
-      key: formatDateKey(date),
-    });
-  }
-  while (cells.length % 7 !== 0) {
-    cells.push(null);
-  }
-  return cells;
-}
-
-function EventCalendar({ events = [] }) {
-  const calendarMonth = useMemo(() => new Date(), []);
-  const cells = useMemo(() => buildCalendarCells(calendarMonth), [calendarMonth]);
-  const eventsByDate = useMemo(() => {
-    return events.reduce((acc, event) => {
-      if (!event?.date) return acc;
-      const eventDate = new Date(event.date);
-      if (!eventDate || Number.isNaN(eventDate.getTime())) return acc;
-      const key = formatDateKey(eventDate);
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(event);
-      return acc;
-    }, {});
-  }, [events]);
-  const todayKey = formatDateKey(new Date());
-  return (
-    <>
-      <div className="calendar-legend">
-        {WEEKDAYS.map((day) => (
-          <div key={day} className="calendar-legend-cell">
-            {day}
-          </div>
-        ))}
-      </div>
-      <div className="calendar-grid">
-        {cells.map((cell, index) => {
-          if (!cell) {
-            return <div key={`empty-${index}`} className="calendar-cell empty"></div>;
-          }
-          const cellEvents = eventsByDate[cell.key] || [];
-          const isToday = cell.key === todayKey;
-          return (
-            <div
-              key={cell.key}
-              className={`calendar-cell ${cellEvents.length ? "has-event" : ""} ${
-                isToday ? "today" : ""
-              }`}
-            >
-              <span className="calendar-day-number">{cell.day}</span>
-              {cellEvents.length > 0 && (
-                <div className="calendar-event-indicator">
-                  {cellEvents.slice(0, 2).map((event) => (
-                    <span key={`${event.id}-${event.title}`} className="calendar-event-dot">
-                      {event.title}
-                    </span>
-                  ))}
-                  {cellEvents.length > 2 && (
-                    <span className="calendar-event-more">
-                      +{cellEvents.length - 2} daha
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </>
-  );
+function getParticipationStatusLabel(status) {
+  return PARTICIPATION_STATUS_LABELS[status] || status;
 }
 
 export default function StudentDashboard({
@@ -403,16 +320,22 @@ export default function StudentDashboard({
     return ["Hepsi", ...list];
   }, [recommendations]);
 
-  const participatedEvents = useMemo(() => {
-    const normalized = participations
-      .map((participation) => participation.event)
-      .filter(Boolean);
-    const toTimestamp = (event) => {
-      const time = new Date(event?.date).getTime();
-      return Number.isFinite(time) ? time : 0;
-    };
-    return normalized.sort((a, b) => toTimestamp(b) - toTimestamp(a));
+  const participationEntries = useMemo(() => {
+    return participations
+      .filter((participation) => participation?.event)
+      .sort((a, b) => {
+        const aTime = new Date(a.event?.date).getTime();
+        const bTime = new Date(b.event?.date).getTime();
+        return Number.isFinite(bTime) && Number.isFinite(aTime)
+          ? bTime - aTime
+          : 0;
+      });
   }, [participations]);
+
+  const participatedEvents = useMemo(
+    () => participationEntries.map((entry) => entry.event),
+    [participationEntries]
+  );
 
   const pastParticipatedEvents = useMemo(() => {
     const now = Date.now();
@@ -661,27 +584,26 @@ export default function StudentDashboard({
         </div>
       ) : (
         <div className="dashboard-layout">
-          <div className="left-stack">
-            <div className="card calendar-card">
-              <div className="section-title">Katıldığım Etkinlik Takvimi</div>
-              <p className="helper-text" style={{ margin: "4px 0 12px" }}>
-                Kayıtlı olduğunuz etkinlikler bu takvimde işaretlenir.
+        <div className="left-stack">
+          <div className="card participation-card">
+            <div className="section-title">Katılım İsteklerim</div>
+            <p className="helper-text" style={{ margin: "4px 0 12px" }}>
+              Gönderilen katılım talepleri burada listelenir, yanında güncel durum görünür.
+            </p>
+            {participationEntries.length === 0 ? (
+              <p className="empty">
+                Henüz katılım isteği göndermediniz.
               </p>
-              <EventCalendar events={participatedEvents} />
-              {participationError && (
-                <p className="helper-text" style={{ color: "#dc2626", marginTop: 8 }}>
-                  {participationError}
-                </p>
-              )}
-            </div>
-            <div className="card past-events-card">
-              <div className="section-title">Geçmiş Katıldığım Etkinlikler</div>
-              {pastParticipatedEvents.length === 0 ? (
-                <p className="empty">Henüz katıldığınız etkinlik yok.</p>
-              ) : (
-                <div className="past-events-list">
-                  {pastParticipatedEvents.slice(0, 6).map((event) => (
-                    <div key={event.id} className="past-event-item">
+            ) : (
+              <div className="participation-list">
+                {participationEntries.map((entry) => {
+                  const event = entry.event || {};
+                  const waitingLabel =
+                    entry.status === "waitlisted" && getWaiting(event)
+                      ? ` (${getWaiting(event)} kişi)`
+                      : "";
+                  return (
+                    <div key={entry.id} className="participation-item">
                       <div>
                         <strong>{event.title}</strong>
                         <p className="event-meta" style={{ margin: "4px 0 2px" }}>
@@ -692,26 +614,62 @@ export default function StudentDashboard({
                           {(event.city || event.club?.city) ?? "-"}
                         </p>
                       </div>
-                      {getEventTags(event).length > 0 && (
-                        <div className="tag-selected" style={{ marginTop: 6 }}>
-                          {getEventTags(event).map((tag) => (
-                            <span key={`${event.id}-${tag}`} className="tag-chip">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <span
+                        className={`status-pill status-${entry.status}`}
+                        role="status"
+                      >
+                        {getParticipationStatusLabel(entry.status)}
+                        {waitingLabel}
+                      </span>
                     </div>
-                  ))}
-                  {pastParticipatedEvents.length > 6 && (
-                    <p className="helper-text">
-                      +{pastParticipatedEvents.length - 6} diğer etkinlik
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            )}
+            {participationError && (
+              <p className="helper-text" style={{ color: "#dc2626", marginTop: 8 }}>
+                {participationError}
+              </p>
+            )}
           </div>
+          <div className="card past-events-card">
+            <div className="section-title">Geçmiş Katıldığım Etkinlikler</div>
+            {pastParticipatedEvents.length === 0 ? (
+              <p className="empty">Henüz katıldığınız etkinlik yok.</p>
+            ) : (
+              <div className="past-events-list">
+                {pastParticipatedEvents.slice(0, 6).map((event) => (
+                  <div key={event.id} className="past-event-item">
+                    <div>
+                      <strong>{event.title}</strong>
+                      <p className="event-meta" style={{ margin: "4px 0 2px" }}>
+                        {event.date} · {event.category}
+                      </p>
+                      <p className="event-meta" style={{ margin: 0 }}>
+                        {(event.university || event.club?.university) ?? "-"} ·{" "}
+                        {(event.city || event.club?.city) ?? "-"}
+                      </p>
+                    </div>
+                    {getEventTags(event).length > 0 && (
+                      <div className="tag-selected" style={{ marginTop: 6 }}>
+                        {getEventTags(event).map((tag) => (
+                          <span key={`${event.id}-${tag}`} className="tag-chip">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {pastParticipatedEvents.length > 6 && (
+                  <p className="helper-text">
+                    +{pastParticipatedEvents.length - 6} diğer etkinlik
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
           <div className="right-stack">
             <div className="card">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>

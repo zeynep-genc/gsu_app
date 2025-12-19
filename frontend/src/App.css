@@ -385,6 +385,47 @@ textarea {
   padding-bottom: 0;
 }
 
+.participation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.participation-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.participation-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.status-pill.status-confirmed {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.status-pill.status-waitlisted {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .grid {
   display: grid;
   gap: 16px;
