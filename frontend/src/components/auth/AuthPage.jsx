@@ -16,6 +16,7 @@ export default function AuthPage({
   onClubRegister,
   disabled,
   view,
+  notification,
 }) {
   const [role, setRole] = useState(null); // "student" | "club" | null
   const [mode, setMode] = useState("login"); // "login" | "register"
@@ -66,6 +67,9 @@ export default function AuthPage({
             Üniversite kulüpleri ve etkinlikleri tek yerde. Devam etmek için
             giriş türünü seç.
             </p>
+            {notification && (
+              <div className="auth-notice">{notification}</div>
+            )}
             <div className="role-buttons">
               <button
               className="role-btn"

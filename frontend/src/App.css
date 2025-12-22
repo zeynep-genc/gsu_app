@@ -828,6 +828,16 @@ footer {
   font-size: 13px;
   color: #666;
 }
+
+.auth-notice {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #d1fae5;
+  color: #047857;
+  font-size: 13px;
+  border: 1px solid #10b981;
+}
 /* ---------- Auth Modern UI ---------- */
 
 .auth-hero {

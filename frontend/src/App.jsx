@@ -42,6 +42,7 @@ export default function App() {
   const [view, setView] = useState(() => readSession()?.view || "auth");
   const [student, setStudent] = useState(() => readSession()?.student || null);
   const [club, setClub] = useState(() => readSession()?.club || null);
+  const [authMessage, setAuthMessage] = useState("");
 
 
 
@@ -162,6 +163,7 @@ export default function App() {
 
   async function handleStudentRegister(data) {
     await api.studentRegister(data);
+    setAuthMessage("Kayıt başarılı! Giriş yaparak devam edebilirsiniz.");
   }
 
   async function handleClubRegister(data) {
@@ -262,6 +264,7 @@ export default function App() {
           onClubRegister={handleClubRegister}
           disabled={isAuthenticating}
           view={view}
+          notification={authMessage}
         />
       )}
 
