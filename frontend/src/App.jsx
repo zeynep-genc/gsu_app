@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "./components/Header.jsx";
 import StudentDashboard from "./components/StudentDashboard.jsx";
 import ClubDashboard from "./components/ClubDashboard.jsx";
@@ -43,6 +43,7 @@ export default function App() {
   const [student, setStudent] = useState(() => readSession()?.student || null);
   const [club, setClub] = useState(() => readSession()?.club || null);
   const [authMessage, setAuthMessage] = useState("");
+  const loginRedirectTimer = useRef(null);
 
 
 
@@ -81,6 +82,15 @@ export default function App() {
     saveSession({ view, student, club });
   }, [view, student, club]);
 
+  useEffect(() => {
+    return () => {
+      if (loginRedirectTimer.current) {
+        clearTimeout(loginRedirectTimer.current);
+        loginRedirectTimer.current = null;
+      }
+    };
+  }, []);
+
 
   async function loadEvents() {
     setLoadingEvents(true);
@@ -118,22 +128,22 @@ export default function App() {
     setIsAuthenticating(true);
     try {
       const response = await api.studentLogin(credentials);
-      // persist tokens
       try {
         if (response.access) localStorage.setItem("accessToken", response.access);
         if (response.refresh) localStorage.setItem("refreshToken", response.refresh);
       } catch (e) {}
 
-      setStudent(response.student);
-      setView("student");
-      await loadFavorites(response.student.id);
-      // fetch recommendations
-      try {
-        const rec = await api.getRecommendations(response.student.id);
-        console.log("Recommendations:", rec.recommendations);
-      } catch (e) {
-        console.warn("Recommendations unavailable", e);
+      setAuthMessage("Giriş başarılı! Yönlendiriliyorsunuz...");
+      if (loginRedirectTimer.current) {
+        clearTimeout(loginRedirectTimer.current);
       }
+      loginRedirectTimer.current = setTimeout(() => {
+        setStudent(response.student);
+        setView("student");
+        loadFavorites(response.student.id).catch(() => {});
+        setAuthMessage("");
+        loginRedirectTimer.current = null;
+      }, 900);
     } catch (error) {
       setStudent(null);
       throw error;
@@ -265,6 +275,7 @@ export default function App() {
           disabled={isAuthenticating}
           view={view}
           notification={authMessage}
+          onNotificationClear={() => setAuthMessage("")}
         />
       )}
 

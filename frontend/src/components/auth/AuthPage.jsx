@@ -17,6 +17,7 @@ export default function AuthPage({
   disabled,
   view,
   notification,
+  onNotificationClear,
 }) {
   const [role, setRole] = useState(null); // "student" | "club" | null
   const [mode, setMode] = useState("login"); // "login" | "register"
@@ -37,6 +38,7 @@ export default function AuthPage({
   function closeModal() {
     setRole(null);
     setMode("login");
+    onNotificationClear?.();
   }
 
   // ESC ile kapansın
@@ -54,6 +56,16 @@ export default function AuthPage({
     }
   }, [view]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      onNotificationClear?.();
+    }
+  }, [isOpen, onNotificationClear]);
+
+  function handleRegistrationSuccess() {
+    setMode("login");
+  }
+
   return (
     <>
       <div className="auth-wrap">
@@ -67,9 +79,6 @@ export default function AuthPage({
             Üniversite kulüpleri ve etkinlikleri tek yerde. Devam etmek için
             giriş türünü seç.
             </p>
-            {notification && (
-              <div className="auth-notice">{notification}</div>
-            )}
             <div className="role-buttons">
               <button
               className="role-btn"
@@ -118,6 +127,10 @@ export default function AuthPage({
               </button>
             </div>
 
+            {notification && (
+              <div className="modal-notice">{notification}</div>
+            )}
+
             {/* İçerik */}
             {role === "student" && mode === "login" && (
               <StudentLogin onSubmit={onStudentLogin} disabled={disabled} />
@@ -126,6 +139,7 @@ export default function AuthPage({
               <StudentRegister
                 onSubmit={onStudentRegister}
                 disabled={disabled}
+                onSuccess={handleRegistrationSuccess}
               />
             )}
 

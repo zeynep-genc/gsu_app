@@ -3,7 +3,7 @@ import { CLASS_LEVEL_OPTIONS } from "../../constants";
 
 const EDU_EMAIL_REGEX = /^[^@]+@[^@]+\.edu\.tr$/i;
 
-export default function StudentRegister({ onSubmit, disabled }) {
+export default function StudentRegister({ onSubmit, disabled, onSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [university, setUniversity] = useState("");
@@ -44,6 +44,7 @@ export default function StudentRegister({ onSubmit, disabled }) {
 
     try {
       await onSubmit(payload);
+      onSuccess?.();
     } catch (err) {
       setError(err.message || "Kayıt başarısız");
     }

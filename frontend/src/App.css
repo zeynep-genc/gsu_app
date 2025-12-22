@@ -829,8 +829,8 @@ footer {
   color: #666;
 }
 
-.auth-notice {
-  margin: 12px 0;
+.modal-notice {
+  margin: 10px 0 0;
   padding: 10px 12px;
   border-radius: 10px;
   background: #d1fae5;
