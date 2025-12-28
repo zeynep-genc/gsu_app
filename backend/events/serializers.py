@@ -264,10 +264,23 @@ class ClubUpdateSerializer(serializers.ModelSerializer):
 class ParticipationSerializer(serializers.ModelSerializer):
     student = StudentSerializer(read_only=True)
     event = EventSerializer(read_only=True)
+    waiting_position = serializers.SerializerMethodField()
+    event = EventSerializer(read_only=True)
 
     class Meta:
         model = Participation
-        fields = ("id", "student", "event", "status", "created_at")
+        fields = ("id", "student", "event", "status", "created_at", "waiting_position")
+
+    def get_waiting_position(self, instance):
+        if instance.status != Participation.STATUS_WAITLISTED:
+            return None
+        return (
+            Participation.objects.filter(
+                event=instance.event,
+                status=Participation.STATUS_WAITLISTED,
+                created_at__lte=instance.created_at,
+            ).count()
+        )
 
 
 class FavoriteSerializer(serializers.ModelSerializer):

@@ -108,6 +108,23 @@ export default function App() {
     }
   }
 
+  async function loadRecommendations() {
+    if (!student?.id) {
+      setRecommendations([]);
+      setRecommendationNotice("");
+      return;
+    }
+    try {
+      const res = await api.getRecommendations(student.id);
+      setRecommendations(res?.recommendations || []);
+      setRecommendationNotice(res?.message || "");
+    } catch (e) {
+      console.warn("Failed to load recommendations", e);
+      setRecommendations([]);
+      setRecommendationNotice("");
+    }
+  }
+
   async function loadFavorites(studentId) {
     if (!studentId) {
       setFavorites([]);
@@ -290,6 +307,7 @@ export default function App() {
           recommendations={recommendations}
           recommendationNotice={recommendationNotice}
           onUpdateStudent={setStudent}
+          onRecommendationsUpdate={loadRecommendations}
         />
       )}
 

@@ -4,6 +4,12 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
+# Render deployment için
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
@@ -58,16 +64,28 @@ TEMPLATES = [
 WSGI_APPLICATION = "uniconnect_backend.wsgi.application"
 ASGI_APPLICATION = "uniconnect_backend.asgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "uniconnect"),
-        "USER": os.environ.get("POSTGRES_USER", "uniconnect"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "uniconnect"),
-        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+# Database - Render PostgreSQL desteği
+if os.environ.get('DATABASE_URL') and dj_database_url:
+    # Render deployment (PostgreSQL)
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ['DATABASE_URL'],
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    # Local development veya manuel PostgreSQL
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("POSTGRES_DB", "uniconnect"),
+            "USER": os.environ.get("POSTGRES_USER", "uniconnect"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "uniconnect"),
+            "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
+            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -120,3 +138,6 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# FastText Model Path
+FASTTEXT_MODEL_PATH = os.path.join(BASE_DIR, 'ml_models', 'cc.tr.300.bin')

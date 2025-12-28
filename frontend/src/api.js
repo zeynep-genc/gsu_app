@@ -188,8 +188,12 @@ export async function getClassLevels() {
    Not: Backend'de /students/:id/ PATCH endpointi gerekir.
 */
 
-export async function updateStudent(studentId, payload) {
-  return request(`/students/${encodeURIComponent(studentId)}/`, {
+export async function updateStudent(studentId, payload, includeRecommendations = false) {
+  const url = includeRecommendations 
+    ? `/students/${encodeURIComponent(studentId)}/?include_recommendations=true`
+    : `/students/${encodeURIComponent(studentId)}/`;
+  
+  return request(url, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });

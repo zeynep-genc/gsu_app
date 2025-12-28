@@ -23,6 +23,12 @@ node_modules/
 dist/
 build/
 
+# ML Models (too large for git)
+backend/ml_models/
+*.bin
+*.vec
+*.gz
+
 # OS / IDE
 .DS_Store
 .idea/

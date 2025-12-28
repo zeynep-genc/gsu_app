@@ -73,6 +73,7 @@ export default function StudentDashboard({
   onUpdateStudent,
   recommendations = [],
   recommendationNotice = "",
+  onRecommendationsUpdate,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({});
@@ -118,12 +119,35 @@ export default function StudentDashboard({
       };
       if (form.password) payload.password = form.password;
       // prepare tag_names from suggested tags + custom tags
-      payload.tag_names = [...tags, ...customTags].map((t) => (typeof t === "string" ? t.trim() : String(t).trim())).filter(Boolean);
+      const oldTagNames = (student?.interests || []).map((t) => (t.name ? t.name : t));
+      const newTagNames = [...tags, ...customTags].map((t) => (typeof t === "string" ? t.trim() : String(t).trim())).filter(Boolean);
+      payload.tag_names = newTagNames;
 
-      const updated = await api.updateStudent(student.id, payload);
+      // İlgi alanları değişti mi kontrol et
+      const tagsChanged = JSON.stringify([...oldTagNames].sort()) !== JSON.stringify([...newTagNames].sort());
+
+      // İlgi alanları değiştiyse include_recommendations=true ile güncelle
+      const updated = await api.updateStudent(student.id, payload, tagsChanged);
+      
       // updated is the student object or API wrapper; our backend returns {message, student}
       const newStudent = updated.student || updated;
       if (onUpdateStudent) onUpdateStudent(newStudent);
+      
+      // Eğer ilgi alanları değiştiyse ve güncel öneriler geldiyse kullan
+      if (tagsChanged && updated.updated_recommendations) {
+        // Önerileri güncelle (parent'a bildir)
+        if (onRecommendationsUpdate) {
+          onRecommendationsUpdate();
+        }
+        alert("Profil güncellendi ve önerileriniz yenilendi!");
+      } else if (tagsChanged) {
+        // Backend'den güncel öneriler gelmediyse manuel yenile
+        if (onRecommendationsUpdate) {
+          onRecommendationsUpdate();
+        }
+        alert("Profil güncellendi! Önerileriniz güncelleniyor...");
+      }
+      
       setIsEditing(false);
     } catch (err) {
       console.error("Profil güncellenemedi:", err);
@@ -599,8 +623,8 @@ export default function StudentDashboard({
                 {participationEntries.map((entry) => {
                   const event = entry.event || {};
                   const waitingLabel =
-                    entry.status === "waitlisted" && getWaiting(event)
-                      ? ` (${getWaiting(event)} kişi)`
+                    entry.status === "waitlisted" && entry.waiting_position
+                      ? ` (${entry.waiting_position}. sıradasınız)`
                       : "";
                   return (
                     <div key={entry.id} className="participation-item">

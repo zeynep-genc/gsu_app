@@ -1,0 +1,59 @@
+# Render.com Blueprint Yapılandırması
+# https://render.com/docs/blueprint-spec
+
+services:
+  # Backend API Service
+  - type: web
+    name: uniconnect-backend
+    env: python
+    region: oregon  # veya size yakın region
+    plan: starter  # free tier için
+    branch: main
+    buildCommand: cd backend && bash build.sh
+    startCommand: cd backend && gunicorn uniconnect_backend.wsgi:application --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/events/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: false
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: uniconnect-db
+          property: connectionString
+      - key: FASTTEXT_ENABLED
+        value: false  # Model kullanmak için 'true' yapın (build süresi uzar)
+      - key: DJANGO_SETTINGS_MODULE
+        value: uniconnect_backend.settings
+      - key: WEB_CONCURRENCY
+        value: 2
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://uniconnect-frontend.onrender.com
+
+  # Frontend Service
+  - type: web
+    name: uniconnect-frontend
+    env: node
+    region: oregon
+    plan: starter
+    branch: main
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://uniconnect-backend.onrender.com/api
+
+# Database
+databases:
+  - name: uniconnect-db
+    plan: starter  # free PostgreSQL
+    databaseName: uniconnect
+    user: uniconnect
