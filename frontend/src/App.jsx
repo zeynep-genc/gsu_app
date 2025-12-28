@@ -77,7 +77,7 @@ export default function App() {
       }
     }
     loadRecs();
-  }, [student]);
+  }, [student?.id, student?.interests]);
   useEffect(() => {
     saveSession({ view, student, club });
   }, [view, student, club]);

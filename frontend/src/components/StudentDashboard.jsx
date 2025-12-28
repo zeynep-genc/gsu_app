@@ -133,19 +133,19 @@ export default function StudentDashboard({
       const newStudent = updated.student || updated;
       if (onUpdateStudent) onUpdateStudent(newStudent);
       
-      // Eğer ilgi alanları değiştiyse ve güncel öneriler geldiyse kullan
-      if (tagsChanged && updated.updated_recommendations) {
-        // Önerileri güncelle (parent'a bildir)
+      // İlgi alanları değişti mi (boşaltma dahil)
+      if (tagsChanged) {
+        // Önerileri her durumda yenile
         if (onRecommendationsUpdate) {
           onRecommendationsUpdate();
         }
-        alert("Profil güncellendi ve önerileriniz yenilendi!");
-      } else if (tagsChanged) {
-        // Backend'den güncel öneriler gelmediyse manuel yenile
-        if (onRecommendationsUpdate) {
-          onRecommendationsUpdate();
+        
+        // Kullanıcıya bildir
+        if (newTagNames.length === 0) {
+          alert("Profil güncellendi. İlgi alanlarınızı temizlediniz, öneriler kaldırıldı.");
+        } else {
+          alert("Profil güncellendi ve önerileriniz yenilendi!");
         }
-        alert("Profil güncellendi! Önerileriniz güncelleniyor...");
       }
       
       setIsEditing(false);
