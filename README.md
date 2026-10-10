@@ -1,54 +1,74 @@
-# UniConnect Tam Yığın Mimarisi
+# UniConnect — Full-Stack Architecture
 
-Bu proje,  React (frontend), Django REST (backend) ve PostgreSQL (veritabanı) katmanlarına ayrılmış bir uygulama mimarisinden oluşur.
+UniConnect is a full-stack student club event management platform built with **React, Django REST Framework, and PostgreSQL**. The application follows a layered architecture that separates the frontend, backend, and database.
 
-## Proje Yapısı
+## Project Structure
 
-```
+```text
 gsu_app/
-├── backend/              # Django REST API + PostgreSQL yapılandırması
-├── frontend/             # React (Vite) arayüzü
+├── backend/              # Django REST API and PostgreSQL configuration
+├── frontend/             # React frontend built with Vite
 └── README.md
 ```
 
 ### Frontend (React)
-- Kaynaklar `frontend/src` altında parçalı bileşenler olarak tutulur.
-- `src/api.js` dosyası, backend REST uç noktaları ile JSON üzerinden haberleşir.
-- `src/components` içerisindeki `StudentDashboard`, `ClubDashboard` vb. bileşenler eski arayüzü modüler hale getirir.
 
-### Backend (Django + DRF)
-- `backend/uniconnect_backend` projesi Django ayarlarını barındırır.
-- `events` uygulaması; kulüp, öğrenci, etkinlik, katılım modelleri ve REST uç noktalarını içerir.
-- `events/management/commands/seed_demo.py` komutu örnek öğrenci/kulüp/etkinlikleri PostgreSQL'e yükler.
+* UI components are organized into modular components under `frontend/src`.
+* `src/api.js` communicates with backend REST endpoints using JSON.
+* Components such as `StudentDashboard` and `ClubDashboard` provide separate interfaces for students and clubs.
 
-## Backend'i Çalıştırma
+### Backend (Django REST Framework)
+
+* `backend/uniconnect_backend` contains the Django project configuration.
+* The `events` application includes models and REST endpoints for clubs, students, events, and event participation.
+* The `events/management/commands/seed_demo.py` command populates the PostgreSQL database with sample student, club, and event data.
+
+## Getting Started
+
+### Prerequisites
+
+* Python 3
+* Node.js and npm
+* PostgreSQL
+
+### Backend Setup
+
 ```bash
 cd backend
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env         # Gerekli PostgreSQL bilgilerini düzenleyin
+
+cp .env.example .env
+# Configure your PostgreSQL connection settings in .env
+
 python manage.py migrate
-python manage.py seed_demo   # Opsiyonel: örnek veriler
+python manage.py seed_demo  # Optional: load sample data
 python manage.py runserver
 ```
 
-> Veritabanı bağlantısı için `.env` içerisinde `POSTGRES_*` alanlarını güncelleyin. Varsayılan olarak `localhost:5432` üzerindeki `uniconnect` veritabanını bekler.
+The backend expects a PostgreSQL database named `uniconnect` running locally on port `5432` by default. Update the `POSTGRES_*` variables in `.env` to match your configuration.
 
-## Frontend'i Çalıştırma
+### Frontend Setup
+
 ```bash
 cd frontend
 npm install
-cp .env.example .env         # Opsiyonel: VITE_API_URL tanımlayabilirsiniz
-npm run dev                  # http://localhost:5173
+
+cp .env.example .env
+# Optionally configure VITE_API_URL
+
+npm run dev
 ```
 
-Varsayılan olarak frontend, `http://localhost:8000/api` adresine istek atar. Farklı bir adres için `.env` dosyanıza `VITE_API_URL` tanımı ekleyin.
+The frontend runs at `http://localhost:5173` by default and sends API requests to `http://localhost:8000/api`. To use a different backend URL, set `VITE_API_URL` in the frontend `.env` file.
 
-## Önemli Dosyalar
-- `frontend/src/App.jsx`: Oturum yönetimi, API entegrasyonu.
-- `frontend/src/components/*.jsx`: Öğrenci/kulüp panelleri ve UI bileşenleri.
-- `backend/events/models.py`: Kulüp, öğrenci, etkinlik ve katılım modelleri.
-- `backend/events/views.py`: REST uç noktaları (giriş, etkinlik CRUD, katılım).
-- `backend/events/serializers.py`: JSON dönüştürücüler.
-- `backend/events/views.py` içinde favori uç noktaları bulunur; frontend favorileri kalıcı olarak PostgreSQL’de tutar.
+## Key Files
 
+* `frontend/src/App.jsx`: Session management and API integration.
+* `frontend/src/components/*.jsx`: Student and club dashboards, along with reusable UI components.
+* `backend/events/models.py`: Data models for clubs, students, events, and participation.
+* `backend/events/views.py`: REST endpoints for authentication, event CRUD operations, participation, and favorites.
+* `backend/events/serializers.py`: Serializers for converting application data to and from JSON.
+
+Favorite events are persisted in PostgreSQL through dedicated backend endpoints and can be managed through the frontend.
